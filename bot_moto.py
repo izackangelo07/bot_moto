@@ -21,10 +21,11 @@ def save_data(data):
         json.dump(data, f, indent=2)
 
 # -----------------------------
-# Funções auxiliares
+# Função auxiliar de data
 # -----------------------------
 def format_date():
-    return f"| {datetime.now().strftime('%d/%m/%y às %H horas')} |"
+    now = datetime.now()
+    return f"| {now.day:02}/{now.month:02}/{str(now.year)[2:]} às {now.hour:02} horas |"
 
 # -----------------------------
 # Comandos do bot
@@ -50,24 +51,6 @@ async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data["km"].append({"date": format_date(), "km": km_value})
     save_data(data)
     await update.message.reply_text(f"KM registrado: {km_value}")
-    
-    # -------------------------
-    # ALERTA AUTOMÁTICO TROCA DE ÓLEO
-    # -------------------------
-    last_oil_km = 0
-    for m in reversed(data["maintenance"]):
-        if "óleo" in m["desc"].lower():
-            for km_entry in reversed(data["km"]):
-                if km_entry["date"] <= m["date"]:
-                    last_oil_km = km_entry["km"]
-                    break
-            break
-
-    km_since_last_oil = km_value - last_oil_km
-    if km_since_last_oil >= 900:
-        await update.message.reply_text(
-            f"⚠️ ALERTA AUTOMÁTICO: Já se passaram {km_since_last_oil} km desde a última troca de óleo. Hora de trocar o óleo!"
-        )
 
 async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 2:
@@ -81,12 +64,12 @@ async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     data = load_data()
-    
+
     # Calcular km percorridos desde o último abastecimento
     last_km = None
     if data["km"]:
         last_km = data["km"][-1]["km"]
-    
+
     km_since_last_fuel = 0
     if data["fuel"] and last_km is not None:
         for km_entry in reversed(data["km"]):
@@ -103,13 +86,8 @@ async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "km_since_last": km_since_last_fuel
     })
     save_data(data)
-    
-    consumo_msg = f"Abastecimento registrado: {liters}L a R${price} cada"
-    if km_since_last_fuel > 0 and liters > 0:
-        consumo = km_since_last_fuel / liters
-        consumo_msg += f"\nConsumo médio desde o último abastecimento: {consumo:.2f} km/l"
-    
-    await update.message.reply_text(consumo_msg)
+
+    await update.message.reply_text(f"Abastecimento registrado: {liters}L a R${price} cada")
 
 async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) == 0:
@@ -124,22 +102,9 @@ async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     msg = "🏍️ Relatório da Moto:\n\n"
-    msg += "KM:\n" + "\n".join([f"{i+1}. {d['date']} {d['km']} km" for i, d in enumerate(data["km"])]) + "\n\n"
-    msg += "Abastecimento:\n" + "\n".join([f"{i+1}. {d['date']} {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])]) + "\n\n"
-    msg += "Manutenção:\n" + "\n".join([f"{i+1}. {d['date']} {d['desc']}" for i, d in enumerate(data["maintenance"])])
-
-    # Consumo médio total
-    total_km = 0
-    total_liters = 0
-    for f in data["fuel"]:
-        if "km_since_last" in f:
-            total_km += f["km_since_last"]
-            total_liters += f["liters"]
-
-    if total_liters > 0:
-        consumo_total = total_km / total_liters
-        msg += f"\n\nConsumo médio total: {consumo_total:.2f} km/l"
-
+    msg += "KMs:\n" + "\n".join([f"{i+1}. {d['date']} {d['km']} km" for i, d in enumerate(data["km"])]) + "\n\n"
+    msg += "Abastecimentos:\n" + "\n".join([f"{i+1}. {d['date']} {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])]) + "\n\n"
+    msg += "Manutenções:\n" + "\n".join([f"{i+1}. {d['date']} {d['desc']}" for i, d in enumerate(data["maintenance"])])
     await update.message.reply_text(msg)
 
 async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
