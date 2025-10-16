@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "botmoto",
+  "private_key_id": "a10e4ed496a02596610309fe21ed6036724fb0ff",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC0ix1ukbsbRupn\ndL0Jrs86TRCK0534pguLCSNfytW4vH6ghQjCtXuUoP3AyjksDDKYmSEGQt7C339w\nomUdtwGgl2K7Au/FKX/gv1f9hujp0xxNGO7pL9a8k7rp7/bxIvCH2dDk3pY3sioE\nhyEwNnGzY8+H8+/xAsX542zEoeRqR9p2rlB1I8RY0H/8yiCtgvgpJeGrq45vd88w\nHE60bdGxP0gLZJEqUJ9d0aZi3lxzi/1TZRgiHh+mnUG8VwDC0IvneHPR+1pbMMKW\naaGDCDXaT2+P7fvriN9do0gFnph88864RWGYJgJeSXyti7pawhyeYwAEklp5+XEb\nNEMiwn+hAgMBAAECggEADn0xnfuFDBHbYvUb7KiCSfgAUVvdTCSrPXu8woXJNBuw\nf9pdUx70bX+kDbJM90t9TgDQBSwdq377P8NQoRtcPpKXolGAg46qjBNfEOIgVA+U\nsF1FYyJrNdQXRonzA/QdYJGq8YspfAvI0nczwyZDZrWmZI8/nNRvpffJ9VfWuG6r\n+GdiQ3UZwRF+6UvZusAnMP0QxWqJ/wo7Ip/kSdnQALEV3QL/iEPdfebBXdGkZeaT\nLzEPCbpoGs/Cru+BtmaJP04SOsyCiGT1nJgs5SgvI6XB8cnW0ewk55VrUPMYLOd4\newxabGyRf3oXIjmYxhxOZWMFYfhYiG9yaGSl2ZXH7wKBgQD17fS6iIgm0tKu9S/I\nt3BgH9Ep6zf3NFN7s9xrmPTNDaRM1eYedq27DNA8C9yDEUV18puCI8dqBvQS9P1n\nbR+P/Np1N4VwQhoz7tivJNGa7jiHIqrVurSWU17bHK25bCLMBby8MQ3BKyIl83Xy\nsE0gzlDjGrGGj4Atr3PgKrzgdwKBgQC777nSJDluDuYWyhc9SHV0CQbBBmexuuZO\nn//JtkycQgKUsniB+PPr2Q+p7bmt/TSjFbh3RDA3c1NYwBad13GURfZicJCrPYuR\nnvxSXGiUKi2PpLyVyX8XFvSUtQjciOM+lvGc0pdexFfo7X9tMgi1WRd0NeVIA342\nHcwz11r+pwKBgAUiKnGaV/03eV5dj9nIunfHMj6Fwm1Okk+KuZclYjbFiiBwdpU8\nNPQqmE4okTnLKoADyGs3A/qamo2qv39hL795r7Wyqv5k4tcirTM6uYVaY6OufZJo\ni0x4AQrh1l6Ae1l25TGodHkLxXK1WkjulS2SIO4cqIf+htZtSyXqvnaRAoGBALBR\nFweU3qBnr+wfiy/+g9rqAQEk7jHrQ9jt+P8YXcWXlG5HBhICK23QhgaJtlMKo9CB\nN0AFpCrRspcoF8/b6X4PKTlvm/pb0k47V0Q52A9xhq8mAZuRn/9clPfS5E5qyq/U\n0zaqyEKreEJaVttuPodM31kymzo1tLo2uHbGi2MvAoGBALaUc4ezDYPInkUleVrr\nVNZ6/TP7sZonu228Y830E+44MoLDNtVRP/0Gt/87qlBUfdQKXyged3weDAi9NMOF\nJHyb1UL+6zPhQZ6lxah+tQiA7a/gOpp1InIbYWbt3v+l6nYyudIDBDVKsZLsJFuv\nkzQ6UV+IacUiofVtzr+PPaA5\n-----END PRIVATE KEY-----\n",
+  "client_email": "bot-moto-service@botmoto.iam.gserviceaccount.com",
+  "client_id": "115848356913705661058",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bot-moto-service%40botmoto.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
