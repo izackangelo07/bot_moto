@@ -1,3 +1,4 @@
+import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import json
@@ -46,7 +47,10 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg += "Manutenção:\n" + "\n".join([f"{d['date']}: {d['desc']}" for d in data["maintenance"]])
     await update.message.reply_text(msg)
 
-app = ApplicationBuilder().token("SEU_TOKEN_AQUI").build()
+# Pega token do ambiente
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("addkm", add_km))
 app.add_handler(CommandHandler("fuel", add_fuel))
