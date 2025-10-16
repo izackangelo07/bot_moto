@@ -26,7 +26,7 @@ def save_data(data):
 # -----------------------------
 def format_date():
     now = datetime.now(ZoneInfo("America/Sao_Paulo"))
-    return f"| {now.day:02}/{now.month:02}/{str(now.year)[2:]} às {now.hour:02} horas |"
+    return f"| {now.day:02}/{now.month:02}/{str(now.year)[2:]} |"
 
 # -----------------------------
 # Comandos do bot
