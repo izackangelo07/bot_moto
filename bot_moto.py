@@ -32,10 +32,12 @@ def format_date():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "🏍️ Bem-vindo ao Bot da Moto!\n\n"
     msg += "Comandos disponíveis:\n"
+    msg += "/start - Mostra esta mensagem\n"
     msg += "/addkm <quilometragem> - Registra o KM atual\n"
     msg += "/fuel <litros> <preço> - Registra abastecimento\n"
     msg += "/maint <descrição> - Registra manutenção\n"
     msg += "/report - Mostra o relatório completo da moto\n"
+    msg += "/del <km|fuel|maint> <número> - Remove um registro errado\n"
     await update.message.reply_text(msg)
 
 async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,9 +124,9 @@ async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     msg = "🏍️ Relatório da Moto:\n\n"
-    msg += "KM:\n" + "\n".join([f"{d['date']} {d['km']} km" for d in data["km"]]) + "\n\n"
-    msg += "Abastecimento:\n" + "\n".join([f"{d['date']} {d['liters']}L a R${d['price']}" for d in data["fuel"]]) + "\n\n"
-    msg += "Manutenção:\n" + "\n".join([f"{d['date']} {d['desc']}" for d in data["maintenance"]])
+    msg += "KM:\n" + "\n".join([f"{i+1}. {d['date']} {d['km']} km" for i, d in enumerate(data["km"])]) + "\n\n"
+    msg += "Abastecimento:\n" + "\n".join([f"{i+1}. {d['date']} {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])]) + "\n\n"
+    msg += "Manutenção:\n" + "\n".join([f"{i+1}. {d['date']} {d['desc']}" for i, d in enumerate(data["maintenance"])])
 
     # Consumo médio total
     total_km = 0
@@ -139,6 +141,32 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += f"\n\nConsumo médio total: {consumo_total:.2f} km/l"
 
     await update.message.reply_text(msg)
+
+async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) != 2:
+        await update.message.reply_text("Use: /del <km|fuel|maint> <número do registro>")
+        return
+
+    tipo = context.args[0].lower()
+    try:
+        index = int(context.args[1]) - 1
+    except ValueError:
+        await update.message.reply_text("O índice deve ser um número.")
+        return
+
+    data = load_data()
+
+    if tipo not in data:
+        await update.message.reply_text("Tipo inválido. Use: km, fuel ou maint.")
+        return
+
+    if index < 0 or index >= len(data[tipo]):
+        await update.message.reply_text("Índice inválido.")
+        return
+
+    removed = data[tipo].pop(index)
+    save_data(data)
+    await update.message.reply_text(f"Registro removido com sucesso:\n{removed}")
 
 # -----------------------------
 # Inicialização do bot
@@ -155,5 +183,6 @@ app.add_handler(CommandHandler("addkm", add_km))
 app.add_handler(CommandHandler("fuel", add_fuel))
 app.add_handler(CommandHandler("maint", add_maintenance))
 app.add_handler(CommandHandler("report", report))
+app.add_handler(CommandHandler("del", delete_record))
 
 app.run_polling()
