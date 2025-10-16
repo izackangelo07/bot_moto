@@ -21,12 +21,17 @@ def save_data(data):
         json.dump(data, f, indent=2)
 
 # -----------------------------
+# Funções auxiliares
+# -----------------------------
+def format_date():
+    return f"| {datetime.now().strftime('%d/%m/%y às %H horas')} |"
+
+# -----------------------------
 # Comandos do bot
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "🏍️ Bem-vindo ao Bot da Moto!\n\n"
     msg += "Comandos disponíveis:\n"
-    msg += "/start - Mostra esta mensagem\n"
     msg += "/addkm <quilometragem> - Registra o KM atual\n"
     msg += "/fuel <litros> <preço> - Registra abastecimento\n"
     msg += "/maint <descrição> - Registra manutenção\n"
@@ -40,7 +45,7 @@ async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     data = load_data()
     km_value = int(context.args[0])
-    data["km"].append({"date": str(datetime.now()), "km": km_value})
+    data["km"].append({"date": format_date(), "km": km_value})
     save_data(data)
     await update.message.reply_text(f"KM registrado: {km_value}")
     
@@ -50,7 +55,6 @@ async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
     last_oil_km = 0
     for m in reversed(data["maintenance"]):
         if "óleo" in m["desc"].lower():
-            # Pega o km correspondente à última manutenção de óleo
             for km_entry in reversed(data["km"]):
                 if km_entry["date"] <= m["date"]:
                     last_oil_km = km_entry["km"]
@@ -91,7 +95,7 @@ async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Registrar o abastecimento
     data["fuel"].append({
-        "date": str(datetime.now()),
+        "date": format_date(),
         "liters": liters,
         "price": price,
         "km_since_last": km_since_last_fuel
@@ -111,16 +115,16 @@ async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     data = load_data()
     desc = " ".join(context.args)
-    data["maintenance"].append({"date": str(datetime.now()), "desc": desc})
+    data["maintenance"].append({"date": format_date(), "desc": desc})
     save_data(data)
     await update.message.reply_text(f"Manutenção registrada: {desc}")
 
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     msg = "🏍️ Relatório da Moto:\n\n"
-    msg += "KM:\n" + "\n".join([f"{d['date']}: {d['km']} km" for d in data["km"]]) + "\n\n"
-    msg += "Abastecimento:\n" + "\n".join([f"{d['date']}: {d['liters']}L a R${d['price']}" for d in data["fuel"]]) + "\n\n"
-    msg += "Manutenção:\n" + "\n".join([f"{d['date']}: {d['desc']}" for d in data["maintenance"]])
+    msg += "KM:\n" + "\n".join([f"{d['date']} {d['km']} km" for d in data["km"]]) + "\n\n"
+    msg += "Abastecimento:\n" + "\n".join([f"{d['date']} {d['liters']}L a R${d['price']}" for d in data["fuel"]]) + "\n\n"
+    msg += "Manutenção:\n" + "\n".join([f"{d['date']} {d['desc']}" for d in data["maintenance"]])
 
     # Consumo médio total
     total_km = 0
