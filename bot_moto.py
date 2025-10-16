@@ -1,104 +1,56 @@
-import os
-from pyrogram import Client, filters
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import json
+from datetime import datetime
 
-# ========================
-# Configurações básicas
-# ========================
-PORT = int(os.environ.get("PORT", 10000))
+DATA_FILE = "moto_data.json"
 
-api_id = os.environ.get("API_ID")
-api_hash = os.environ.get("API_HASH")
-bot_token = os.environ.get("BOT_TOKEN")
-
-app = Client(
-    "bot_moto",
-    api_id=api_id,
-    api_hash=api_hash,
-    bot_token=bot_token,
-)
-
-# ========================
-# Conexão com Google Sheets
-# ========================
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/drive",
-]
-
-creds = ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
-client = gspread.authorize(creds)
-
-# Planilhas
-km_sheet = client.open("Moto").worksheet("KM")
-fuel_sheet = client.open("Moto").worksheet("Combustivel")
-
-# ========================
-# Comandos
-# ========================
-
-@app.on_message(filters.command("start"))
-def start(_, msg):
-    msg.reply_text(
-        "🏍️ *Bem-vindo ao Bot da Moto!*\n\n"
-        "Comandos disponíveis:\n"
-        "/km <valor> — registra quilometragem\n"
-        "/fuel <litros> <valor> — registra combustível\n"
-        "/fuelmes — mostra gasto mensal\n"
-        "/oleo — verifica se já está na hora de trocar o óleo",
-        quote=True
-    )
-
-@app.on_message(filters.command("km"))
-def km_register(_, msg):
+def load_data():
     try:
-        km = msg.text.split()[1]
-        km_sheet.append_row([msg.from_user.first_name, km])
-        msg.reply_text(f"✅ Quilometragem registrada: {km} km")
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
     except:
-        msg.reply_text("❌ Use: `/km 10234`")
+        return {"km": [], "fuel": [], "maintenance": []}
 
-@app.on_message(filters.command("fuel"))
-def fuel_register(_, msg):
-    try:
-        _, litros, valor = msg.text.split()
-        fuel_sheet.append_row([msg.from_user.first_name, litros, valor])
-        msg.reply_text(f"⛽ Combustível registrado: {litros} L por R$ {valor}")
-    except:
-        msg.reply_text("❌ Use: `/fuel 5.2 35.00`")
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
-@app.on_message(filters.command("fuelmes"))
-def fuel_mes(_, msg):
-    registros = fuel_sheet.get_all_values()[1:]
-    total = sum(float(r[2]) for r in registros if r[2])
-    msg.reply_text(f"💰 Gasto total com combustível no mês: R$ {total:.2f}")
+async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    km_value = int(context.args[0])
+    data["km"].append({"date": str(datetime.now()), "km": km_value})
+    save_data(data)
+    await update.message.reply_text(f"KM registrado: {km_value}")
 
-@app.on_message(filters.command("oleo"))
-def oleo_alerta(_, msg):
-    registros = km_sheet.get_all_values()
-    if len(registros) < 2:
-        msg.reply_text("⚠️ Poucos registros de KM para calcular.")
-        return
-    km_atual = int(registros[-1][1])
-    km_inicial = int(registros[0][1])
-    rodado = km_atual - km_inicial
+async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    liters = float(context.args[0])
+    price = float(context.args[1])
+    data["fuel"].append({"date": str(datetime.now()), "liters": liters, "price": price})
+    save_data(data)
+    await update.message.reply_text(f"Abastecimento registrado: {liters}L a R${price} cada")
 
-    if rodado >= 900:
-        msg.reply_text("🛢️ Já passou 900km! Hora de trocar o óleo.")
-    else:
-        falta = 900 - rodado
-        msg.reply_text(f"📏 Faltam {falta} km para a troca de óleo.")
+async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    desc = " ".join(context.args)
+    data["maintenance"].append({"date": str(datetime.now()), "desc": desc})
+    save_data(data)
+    await update.message.reply_text(f"Manutenção registrada: {desc}")
 
-# ========================
-# Webhook (Render)
-# ========================
-if __name__ == "__main__":
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path="",
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/",
-    )
+async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    msg = "🏍️ Relatório da Moto:\n\n"
+    msg += "KM:\n" + "\n".join([f"{d['date']}: {d['km']} km" for d in data["km"]]) + "\n\n"
+    msg += "Abastecimento:\n" + "\n".join([f"{d['date']}: {d['liters']}L a R${d['price']}" for d in data["fuel"]]) + "\n\n"
+    msg += "Manutenção:\n" + "\n".join([f"{d['date']}: {d['desc']}" for d in data["maintenance"]])
+    await update.message.reply_text(msg)
+
+app = ApplicationBuilder().token("SEU_TOKEN_AQUI").build()
+
+app.add_handler(CommandHandler("addkm", add_km))
+app.add_handler(CommandHandler("fuel", add_fuel))
+app.add_handler(CommandHandler("maint", add_maintenance))
+app.add_handler(CommandHandler("report", report))
+
+app.run_polling()
