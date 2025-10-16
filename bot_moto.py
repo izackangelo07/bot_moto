@@ -3,6 +3,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo  # Para fuso horário correto
 
 DATA_FILE = "moto_data.json"
 
@@ -21,10 +22,10 @@ def save_data(data):
         json.dump(data, f, indent=2)
 
 # -----------------------------
-# Função auxiliar de data
+# Função auxiliar de data com fuso horário
 # -----------------------------
 def format_date():
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("America/Sao_Paulo"))
     return f"| {now.day:02}/{now.month:02}/{str(now.year)[2:]} às {now.hour:02} horas |"
 
 # -----------------------------
@@ -64,26 +65,10 @@ async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     data = load_data()
-
-    # Calcular km percorridos desde o último abastecimento
-    last_km = None
-    if data["km"]:
-        last_km = data["km"][-1]["km"]
-
-    km_since_last_fuel = 0
-    if data["fuel"] and last_km is not None:
-        for km_entry in reversed(data["km"]):
-            if km_entry["date"] <= data["fuel"][-1]["date"]:
-                last_km = km_entry["km"]
-                break
-        km_since_last_fuel = 0 if last_km is None else data["km"][-1]["km"] - last_km
-
-    # Registrar o abastecimento
     data["fuel"].append({
         "date": format_date(),
         "liters": liters,
-        "price": price,
-        "km_since_last": km_since_last_fuel
+        "price": price
     })
     save_data(data)
 
@@ -102,9 +87,9 @@ async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     msg = "🏍️ Relatório da Moto:\n\n"
-    msg += "KMs:\n" + "\n".join([f"{i+1}. {d['date']} {d['km']} km" for i, d in enumerate(data["km"])]) + "\n\n"
-    msg += "Abastecimentos:\n" + "\n".join([f"{i+1}. {d['date']} {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])]) + "\n\n"
-    msg += "Manutenções:\n" + "\n".join([f"{i+1}. {d['date']} {d['desc']}" for i, d in enumerate(data["maintenance"])])
+    msg += "KM:\n" + "\n".join([f"{i+1}. {d['date']} {d['km']} km" for i, d in enumerate(data["km"])]) + "\n\n"
+    msg += "Abastecimento:\n" + "\n".join([f"{i+1}. {d['date']} {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])]) + "\n\n"
+    msg += "Manutenção:\n" + "\n".join([f"{i+1}. {d['date']} {d['desc']}" for i, d in enumerate(data["maintenance"])])
     await update.message.reply_text(msg)
 
 async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
