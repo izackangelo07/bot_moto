@@ -106,15 +106,20 @@ async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = load_data()
 
-    if tipo not in data:
+    # Mapeamento do comando para a chave correta
+    tipo_map = {"km": "km", "fuel": "fuel", "maint": "maintenance"}
+
+    if tipo not in tipo_map:
         await update.message.reply_text("Tipo inválido. Use: km, fuel ou maint.")
         return
 
-    if index < 0 or index >= len(data[tipo]):
+    tipo_json = tipo_map[tipo]
+
+    if index < 0 or index >= len(data[tipo_json]):
         await update.message.reply_text("Índice inválido.")
         return
 
-    removed = data[tipo].pop(index)
+    removed = data[tipo_json].pop(index)
     save_data(data)
     await update.message.reply_text(f"Registro removido com sucesso:\n{removed}")
 
