@@ -145,7 +145,7 @@ def total_fuel_geral():
     return total
 
 def generate_pdf():
-    """Gera um PDF com a mesma formatação do /report"""
+    """Gera um PDF com a mesma formatação do /report (SEM LIMITE)"""
     try:
         # Criar buffer para o PDF
         buffer = io.BytesIO()
@@ -196,30 +196,30 @@ def generate_pdf():
         }
         nome_mes = meses_pt.get(now.month, now.strftime("%B"))
         
-        # KM
+        # KM (TODOS os registros)
         story.append(Paragraph("<b>📏 KM:</b>", normal_style))
         if bot_data["km"]:
-            for i, item in enumerate(bot_data["km"][-10:], 1):
+            for i, item in enumerate(bot_data["km"], 1):
                 story.append(Paragraph(f"{i}. |{item['date']}|{item['km']} Km", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
         story.append(Spacer(1, 10))
         
-        # Manutenções
+        # Manutenções (TODOS os registros)
         story.append(Paragraph("<b>🧰 Manutenções:</b>", normal_style))
         if bot_data["manu"]:
-            for i, item in enumerate(bot_data["manu"][-10:], 1):
+            for i, item in enumerate(bot_data["manu"], 1):
                 story.append(Paragraph(f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
         story.append(Spacer(1, 10))
         
-        # Abastecimentos
+        # Abastecimentos (TODOS os registros)
         story.append(Paragraph("<b>⛽ Abastecimentos:</b>", normal_style))
         if bot_data["fuel"]:
-            for i, item in enumerate(bot_data["fuel"][-10:], 1):
+            for i, item in enumerate(bot_data["fuel"], 1):
                 story.append(Paragraph(f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
@@ -244,7 +244,7 @@ def generate_pdf():
         return None
 
 def generate_report():
-    """Gera o relatório completo com gastos"""
+    """Gera o relatório completo com gastos (apenas últimos 5 registros)"""
     msg = "🏍️ *RELATÓRIO*\n\n"
     
     # Gastos
@@ -259,26 +259,26 @@ def generate_report():
     }
     nome_mes = meses_pt.get(now.month, now.strftime("%B"))
     
-    # KM
-    msg += "📏 *KM:*\n"
+    # KM (apenas últimos 5)
+    msg += "📏 *KM (últimos 5):*\n"
     if bot_data["km"]:
-        for i, item in enumerate(bot_data["km"][-10:], 1):
+        for i, item in enumerate(bot_data["km"][-5:], 1):
             msg += f"{i}. |{item['date']}|{item['km']} Km\n"
     else:
         msg += "Nenhum registro\n"
 
-    # Manutenções
-    msg += "\n🧰 *Manutenções:*\n"
+    # Manutenções (apenas últimas 5)
+    msg += "\n🧰 *Manutenções (últimas 5):*\n"
     if bot_data["manu"]:
-        for i, item in enumerate(bot_data["manu"][-10:], 1):
+        for i, item in enumerate(bot_data["manu"][-5:], 1):
             msg += f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km\n"
     else:
         msg += "Nenhum registro\n"
     
-    # Abastecimentos
-    msg += "\n⛽ *Abastecimentos:*\n"
+    # Abastecimentos (apenas últimos 5)
+    msg += "\n⛽ *Abastecimentos (últimos 5):*\n"
     if bot_data["fuel"]:
-        for i, item in enumerate(bot_data["fuel"][-10:], 1):
+        for i, item in enumerate(bot_data["fuel"][-5:], 1):
             msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
     else:
         msg += "Nenhum registro\n"
@@ -307,8 +307,8 @@ def process_command(update):
                 "• /fuel Litros Valor — Registra abastecimento\n"
                 "• /manu Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
-                "• /report — Resumo geral\n"
-                "• /pdf — Gera relatório em PDF\n\n"
+                "• /report — Resumo geral (últimos 5 registros)\n"
+                "• /pdf — Gera relatório completo em PDF\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
@@ -378,7 +378,7 @@ def process_command(update):
             send_message(chat_id, generate_report())
         
         elif text.startswith("/pdf"):
-            send_message(chat_id, "📄 Gerando relatório em PDF...")
+            send_message(chat_id, "📄 Gerando relatório completo em PDF...")
             pdf_buffer = generate_pdf()
             if pdf_buffer:
                 # Nome do arquivo com data
