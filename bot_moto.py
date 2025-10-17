@@ -162,7 +162,7 @@ def send_daily_notification():
         if current_km > 0:
             alert_msg = check_oil_change_alert(current_km)
             if alert_msg:
-                notification = f" \\ \\ \\ 🔔*MANUTENÇÃO MOTO*🔔\n{alert_msg}"
+                notification = f"```🔔*MANUTENÇÃO MOTO*🔔```\n{alert_msg}"
                 send_message(NOTIFICATION_CHAT_ID, notification)
                 print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
     except Exception as e:
@@ -359,7 +359,7 @@ def notification_scheduler():
             current_minute = now.minute
             
             # Verificar se é 8:00 OU 22:30 e ainda não notificou nesse horário
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 19)) and last_notification_hour != current_hour:
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 23)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
@@ -499,13 +499,14 @@ def process_command(update):
                         send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
                     else:
                         send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
-                    
+
+                    send_message(chat_id, generate_report())
+            
                     # Se for troca de óleo, enviar mensagem especial
                     oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
                     if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
                         send_message(chat_id, "🔧 *TROCA DE ÓLEO REGISTRADA! PRÓXIMO ALERTA EM 1000KM*")
-                    
-                    send_message(chat_id, generate_report())
+                        
                 else:
                     send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
             except:
