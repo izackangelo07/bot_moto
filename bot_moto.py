@@ -14,6 +14,12 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GIST_ID = os.getenv("GIST_ID")
 PORT = int(os.environ.get("PORT", 8080))
 
+# Limpar URL do Gist_ID se necessário
+if GIST_ID and "github.com" in GIST_ID:
+    # Extrair apenas o ID da URL
+    GIST_ID = GIST_ID.split("/")[-1]
+    print(f"🔄 Gist ID extraído da URL: {GIST_ID}")
+
 print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
 print(f"✅ GitHub Token: {GITHUB_TOKEN[:10]}..." if GITHUB_TOKEN else "❌ GitHub Token não configurado")
 print(f"✅ Gist ID: {GIST_ID}" if GIST_ID else "❌ Gist ID não configurado")
@@ -32,15 +38,22 @@ def load_from_gist():
             "Accept": "application/vnd.github.v3+json"
         }
         
+        print(f"🔍 Buscando Gist: {url}")
         response = requests.get(url, headers=headers, timeout=10)
+        
         if response.status_code == 200:
             gist_data = response.json()
-            content = gist_data["files"]["moto_data.json"]["content"]
-            loaded_data = json.loads(content)
-            print("✅ Dados carregados do Gist")
-            return loaded_data
+            files = gist_data.get("files", {})
+            if "moto_data.json" in files:
+                content = files["moto_data.json"]["content"]
+                loaded_data = json.loads(content)
+                print("✅ Dados carregados do Gist")
+                return loaded_data
+            else:
+                print("❌ Arquivo 'moto_data.json' não encontrado no Gist")
+                return {"km": [], "fuel": [], "maintenance": []}
         else:
-            print(f"❌ Erro ao carregar Gist: {response.status_code}")
+            print(f"❌ Erro ao carregar Gist: {response.status_code} - {response.text}")
             return {"km": [], "fuel": [], "maintenance": []}
     except Exception as e:
         print(f"❌ Erro ao carregar do Gist: {e}")
@@ -72,15 +85,43 @@ def save_to_gist(data):
             print("✅ Dados salvos no Gist")
             return True
         else:
-            print(f"❌ Erro ao salvar no Gist: {response.status_code}")
+            print(f"❌ Erro ao salvar no Gist: {response.status_code} - {response.text}")
             return False
     except Exception as e:
         print(f"❌ Erro ao salvar no Gist: {e}")
         return False
 
+# ========== BACKUP LOCAL COMO FALLBACK ==========
+DATA_FILE = "/tmp/moto_data.json"
+
+def load_local_backup():
+    """Tenta carregar backup local"""
+    try:
+        with open(DATA_FILE, 'r') as f:
+            data = json.load(f)
+            print("✅ Dados carregados do backup local")
+            return data
+    except:
+        return {"km": [], "fuel": [], "maintenance": []}
+
+def save_local_backup(data):
+    """Salva backup local"""
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print("✅ Backup local salvo")
+    except Exception as e:
+        print(f"❌ Erro ao salvar backup local: {e}")
+
 # ========== INICIALIZAR DADOS ==========
-print("📂 Carregando dados do Gist...")
+print("📂 Carregando dados...")
 bot_data = load_from_gist()
+
+# Se Gist falhou, tenta backup local
+if bot_data == {"km": [], "fuel": [], "maintenance": []}:
+    bot_data = load_local_backup()
+
+print(f"📊 Dados carregados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos, {len(bot_data['maintenance'])} manutenções")
 
 # ========== FUNÇÕES DO BOT ==========
 def send_message(chat_id, text):
@@ -94,6 +135,12 @@ def send_message(chat_id, text):
 def format_date():
     now = datetime.now()
     return f"{now.day:02d}/{now.month:02d} {now.hour:02d}:{now.minute:02d}"
+
+def save_data():
+    """Salva dados em ambos Gist e local"""
+    gist_success = save_to_gist(bot_data)
+    save_local_backup(bot_data)  # Sempre salva localmente
+    return gist_success
 
 def process_command(update):
     try:
@@ -125,7 +172,7 @@ def process_command(update):
             try:
                 km_value = int(text.split()[1])
                 bot_data["km"].append({"km": km_value, "date": format_date()})
-                if save_to_gist(bot_data):
+                if save_data():
                     send_message(chat_id, f"✅ KM registrado: {km_value} km")
                 else:
                     send_message(chat_id, f"⚠️ KM registrado: {km_value} km (backup falhou)")
@@ -138,7 +185,7 @@ def process_command(update):
                 liters = float(parts[1])
                 price = float(parts[2])
                 bot_data["fuel"].append({"liters": liters, "price": price, "date": format_date()})
-                if save_to_gist(bot_data):
+                if save_data():
                     send_message(chat_id, f"⛽ Abastecimento: {liters}L a R$ {price:.2f}")
                 else:
                     send_message(chat_id, f"⚠️ Abastecimento: {liters}L a R$ {price:.2f} (backup falhou)")
@@ -150,7 +197,7 @@ def process_command(update):
                 desc = " ".join(text.split()[1:])
                 if desc:
                     bot_data["maintenance"].append({"desc": desc, "date": format_date()})
-                    if save_to_gist(bot_data):
+                    if save_data():
                         send_message(chat_id, f"🧰 Manutenção registrada: {desc}")
                     else:
                         send_message(chat_id, f"⚠️ Manutenção registrada: {desc} (backup falhou)")
@@ -195,17 +242,18 @@ def process_command(update):
             send_message(chat_id, f"🆔 Seu ID: `{chat_id}`")
         
         elif text.startswith("/backup"):
-            if save_to_gist(bot_data):
+            if save_data():
                 send_message(chat_id, "💾 Backup realizado com sucesso!")
             else:
-                send_message(chat_id, "❌ Falha no backup!")
+                send_message(chat_id, "❌ Falha no backup do Gist!")
         
         elif text.startswith("/status"):
             status_msg = "📊 *STATUS DO SISTEMA*\n\n"
             status_msg += f"📏 KM registrados: {len(bot_data['km'])}\n"
             status_msg += f"⛽ Abastecimentos: {len(bot_data['fuel'])}\n"
             status_msg += f"🧰 Manutenções: {len(bot_data['maintenance'])}\n"
-            status_msg += f"🔧 Backup: {'✅ Ativo' if GITHUB_TOKEN and GIST_ID else '❌ Inativo'}\n"
+            status_msg += f"🔧 Backup Gist: {'✅ Ativo' if GITHUB_TOKEN and GIST_ID else '❌ Inativo'}\n"
+            status_msg += f"💾 Backup Local: ✅ Ativo\n"
             send_message(chat_id, status_msg)
         
         elif text.startswith("/del"):
@@ -217,7 +265,7 @@ def process_command(update):
                     
                     if tipo in ["km", "fuel", "maint"] and 0 <= index < len(bot_data[tipo]):
                         bot_data[tipo].pop(index)
-                        if save_to_gist(bot_data):
+                        if save_data():
                             send_message(chat_id, f"🗑️ Registro removido!")
                         else:
                             send_message(chat_id, f"⚠️ Registro removido (backup falhou)")
@@ -231,7 +279,7 @@ def process_command(update):
     except Exception as e:
         print(f"❌ Erro ao processar comando: {e}")
 
-# ========== POLLING ==========
+# ========== RESTANTE DO CÓDIGO (MESMO) ==========
 def polling_loop():
     print("🔄 Iniciando polling...")
     offset = 0
@@ -262,7 +310,6 @@ def polling_loop():
             print(f"❌ Erro no polling: {e}")
             time.sleep(10)
 
-# ========== HTTP SERVER ==========
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -277,7 +324,6 @@ def start_http_server():
     print(f"🌐 HTTP Server rodando na porta {PORT}")
     server.serve_forever()
 
-# ========== INICIALIZAÇÃO ==========
 if __name__ == "__main__":
     http_thread = Thread(target=start_http_server, daemon=True)
     http_thread.start()
