@@ -290,26 +290,34 @@ def generate_report():
     }
     nome_mes = meses_pt.get(now.month, now.strftime("%B"))
     
-    # KM (apenas últimos 5)
+    # KM (apenas últimos 5) - calcular índices corretos
     msg += "📏 *KM (últimos 5):*\n"
     if bot_data["km"]:
-        for i, item in enumerate(bot_data["km"][-5:], 1):
+        # Pegar os últimos 5 registros
+        last_km = bot_data["km"][-5:]
+        # Calcular o índice inicial correto
+        start_index = len(bot_data["km"]) - len(last_km) + 1
+        for i, item in enumerate(last_km, start_index):
             msg += f"{i}. |{item['date']}|{item['km']} Km\n"
     else:
         msg += "Nenhum registro\n"
 
-    # Manutenções (apenas últimas 5)
+    # Manutenções (apenas últimas 5) - calcular índices corretos
     msg += "\n🧰 *Manutenções (últimas 5):*\n"
     if bot_data["manu"]:
-        for i, item in enumerate(bot_data["manu"][-5:], 1):
+        last_manu = bot_data["manu"][-5:]
+        start_index = len(bot_data["manu"]) - len(last_manu) + 1
+        for i, item in enumerate(last_manu, start_index):
             msg += f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km\n"
     else:
         msg += "Nenhum registro\n"
     
-    # Abastecimentos (apenas últimos 5)
+    # Abastecimentos (apenas últimos 5) - calcular índices corretos
     msg += "\n⛽ *Abastecimentos (últimos 5):*\n"
     if bot_data["fuel"]:
-        for i, item in enumerate(bot_data["fuel"][-5:], 1):
+        last_fuel = bot_data["fuel"][-5:]
+        start_index = len(bot_data["fuel"]) - len(last_fuel) + 1
+        for i, item in enumerate(last_fuel, start_index):
             msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
     else:
         msg += "Nenhum registro\n"
