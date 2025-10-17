@@ -174,11 +174,11 @@ def check_oil_change_alert(current_km):
     if km_since_last_oil >= 1000:
         return f"* PASSOU DA HORA - {km_since_last_oil}KM RODADOS*!\n        🚨TROQUE O ÓLEO AGORA!🚨"
     elif km_remaining <= 100:
-        return f"🔴*ALERTA CRÍTICO:* FALTAM APENAS {km_remaining}KM PARA TROCAR O ÓLEO!🔴"
+        return f"        🔴*ALERTA CRÍTICO*🔴\nFALTAM APENAS {km_remaining}KM PARA TROCAR O ÓLEO!"
     elif km_remaining <= 300:
-        return f"🟡*ALERTA:* FALTAM {km_remaining}KM PARA TROCAR O ÓLEO🟡"
+        return f"        🟡*ALERTA*🟡\nFALTAM {km_remaining}KM PARA TROCAR O ÓLEO"
     elif km_remaining <= 500:
-        return f"🔵*LEMBRETE:* FALTAM {km_remaining}KM PARA TROCAR O ÓLEO🔵"
+        return f"        🔵*LEMBRETE*🔵\nFALTAM {km_remaining}KM PARA TROCAR O ÓLEO"
     
     return None
 
