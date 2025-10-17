@@ -132,7 +132,7 @@ def check_oil_change_alert(current_km):
     last_oil_km = get_last_oil_change()
     
     if last_oil_km == 0:
-        return "⚠️ *ALERTA:* Nenhuma troca de óleo registrada ainda!"
+        return "⚠️ *ALERTA:* NENHUMA TROCA DE ÓLEO REGISTRADA AINDA!"
     
     km_since_last_oil = current_km - last_oil_km
     km_remaining = 1000 - km_since_last_oil
@@ -140,11 +140,11 @@ def check_oil_change_alert(current_km):
     if km_since_last_oil >= 1000:
         return f"🔴🚨 *ALERTA URGENTE:* JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO! TROQUE O ÓLEO IMEDIATAMENTE! 🔴🚨"
     elif km_remaining <= 100:
-        return f"🔴 *ALERTA CRÍTICO:* Faltam apenas {km_remaining}km para trocar o óleo!"
+        return f"🔴 *ALERTA CRÍTICO:* FALTAM APENAS {km_remaining}KM PARA TROCAR O ÓLEO!"
     elif km_remaining <= 300:
-        return f"🟡 *ALERTA:* Faltam {km_remaining}km para trocar o óleo"
+        return f"🟡 *ALERTA:* FALTAM {km_remaining}KM PARA TROCAR O ÓLEO"
     elif km_remaining <= 500:
-        return f"🔵 *LEMBRETE:* Faltam {km_remaining}km para trocar o óleo"
+        return f"🔵 *LEMBRETE:* FALTAM {km_remaining}KM PARA TROCAR O ÓLEO"
     
     return None
 
@@ -380,10 +380,11 @@ def process_command(update):
                 send_message(chat_id, f"⛽ Abastecimento: {liters}L a R$ {price:.2f}")
                 send_message(chat_id, generate_report())
                 
-                # Verificar alerta de troca de óleo
-                    alert_msg = check_oil_change_alert(km_value)
-                    if alert_msg:
-                        send_message(chat_id, alert_msg)
+                # Verificar alerta de troca de óleo - usar o último KM registrado
+                current_km = get_last_km()
+                alert_msg = check_oil_change_alert(current_km)
+                if alert_msg:
+                    send_message(chat_id, alert_msg)
                         
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
@@ -417,7 +418,7 @@ def process_command(update):
                     # Se for troca de óleo, enviar mensagem especial
                     oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
                     if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
-                        send_message(chat_id, "🔧 *Troca de óleo registrada! Próximo alerta em 1000km*")
+                        send_message(chat_id, "🔧 *TROCA DE ÓLEO REGISTRADA! PRÓXIMO ALERTA EM 1000KM*")
                     
                     send_message(chat_id, generate_report())
                 else:
