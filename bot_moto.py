@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Dispatcher, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, filters
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
