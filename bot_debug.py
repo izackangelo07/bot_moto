@@ -7,7 +7,7 @@ import requests
 # ================= VARIÁVEIS =================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 APP_URL = os.getenv("APP_URL")  # ex: https://botmoto-production.up.railway.app
-PORT = int(os.environ.get("PORT", 8000))
+PORT = int(os.environ.get("PORT", 8080))
 
 print("✅ Iniciando Bot de Debug...")
 print("APP_URL:", APP_URL)
