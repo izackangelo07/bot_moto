@@ -293,7 +293,7 @@ def generate_pdf():
         story.append(Paragraph("<b>📏 KM:</b>", normal_style))
         if bot_data["km"]:
             for i, item in enumerate(bot_data["km"], 1):
-                story.append(Paragraph(f"{i}. |{item['date']}|{item['km']} Km", normal_style))
+                story.append(Paragraph(f"{i}. {item['km']} Km |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
@@ -303,7 +303,7 @@ def generate_pdf():
         story.append(Paragraph("<b>🧰 Manutenções:</b>", normal_style))
         if bot_data["manu"]:
             for i, item in enumerate(bot_data["manu"], 1):
-                story.append(Paragraph(f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km", normal_style))
+                story.append(Paragraph(f"{i}. {item['desc']}|{item['km']} Km |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
@@ -313,7 +313,7 @@ def generate_pdf():
         story.append(Paragraph("<b>⛽ Abastecimentos:</b>", normal_style))
         if bot_data["fuel"]:
             for i, item in enumerate(bot_data["fuel"], 1):
-                story.append(Paragraph(f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}", normal_style))
+                story.append(Paragraph(f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
@@ -362,7 +362,7 @@ def generate_report():
         last_km = bot_data["km"][-5:]
         start_index = len(bot_data["km"]) - len(last_km) + 1
         for i, item in enumerate(last_km, start_index):
-            msg += f"{i}. |{item['date']}|{item['km']} Km\n"
+            msg += f"{i}. {item['km']} Km |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
 
@@ -372,7 +372,7 @@ def generate_report():
         last_manu = bot_data["manu"][-5:]
         start_index = len(bot_data["manu"]) - len(last_manu) + 1
         for i, item in enumerate(last_manu, start_index):
-            msg += f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km\n"
+            msg += f"{i}. {item['desc']}|{item['km']} Km |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
     
@@ -382,7 +382,7 @@ def generate_report():
         last_fuel = bot_data["fuel"][-5:]
         start_index = len(bot_data["fuel"]) - len(last_fuel) + 1
         for i, item in enumerate(last_fuel, start_index):
-            msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
+            msg += f"{i}. |{item['liters']}L por R${item['price']:.2f} |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
 
@@ -407,8 +407,8 @@ def notification_scheduler():
             current_hour = now.hour
             current_minute = now.minute
             
-            # Verificar horários configurados (8:00 e 19:42)
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 33)) and last_notification_hour != current_hour:
+            # Verificar horários configurados (8:00 e 22:30)
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 52)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
