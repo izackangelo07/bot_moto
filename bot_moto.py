@@ -24,9 +24,9 @@ print(f"✅ Gist ID: {GIST_ID}" if GIST_ID else "❌ Gist ID")
 
 # ========== GITHUB GIST FUNCTIONS ==========
 def load_from_gist():
-    """Carrega dados do Gist"""
+    """Carrega dados do Gist - usa apenas manu"""
     if not GITHUB_TOKEN or not GIST_ID:
-        return {"km": [], "fuel": [], "maintenance": []}
+        return {"km": [], "fuel": [], "manu": []}
     
     try:
         url = f"https://api.github.com/gists/{GIST_ID}"
@@ -42,13 +42,28 @@ def load_from_gist():
             files = gist_data.get("files", {})
             if "moto_data.json" in files:
                 content = files["moto_data.json"]["content"]
-                return json.loads(content)
-        return {"km": [], "fuel": [], "maintenance": []}
+                data = json.loads(content)
+                
+                # REMOVER COMPLETAMENTE maintenance e usar apenas manu
+                if "maintenance" in data:
+                    # Se tiver dados em maintenance, mover para manu
+                    if "manu" not in data and data["maintenance"]:
+                        data["manu"] = data["maintenance"]
+                        print("🔄 Dados movidos de 'maintenance' para 'manu'")
+                    # Remover maintenance completamente
+                    data.pop("maintenance", None)
+                
+                # Garantir que manu existe
+                if "manu" not in data:
+                    data["manu"] = []
+                    
+                return data
+        return {"km": [], "fuel": [], "manu": []}
     except:
-        return {"km": [], "fuel": [], "maintenance": []}
+        return {"km": [], "fuel": [], "manu": []}
 
 def save_to_gist(data):
-    """Salva dados no Gist"""
+    """Salva dados no Gist - usa apenas manu"""
     if not GITHUB_TOKEN or not GIST_ID:
         return False
     
@@ -59,10 +74,14 @@ def save_to_gist(data):
             "Accept": "application/vnd.github.v3+json"
         }
         
+        # Garantir que não há maintenance no dado salvo
+        data_to_save = data.copy()
+        data_to_save.pop("maintenance", None)
+        
         payload = {
             "files": {
                 "moto_data.json": {
-                    "content": json.dumps(data, indent=2, ensure_ascii=False)
+                    "content": json.dumps(data_to_save, indent=2, ensure_ascii=False)
                 }
             }
         }
@@ -75,7 +94,7 @@ def save_to_gist(data):
 # ========== INICIALIZAR DADOS ==========
 print("📂 Carregando dados...")
 bot_data = load_from_gist()
-print(f"📊 Dados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos")
+print(f"📊 Dados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos, {len(bot_data['manu'])} manutenções")
 
 # ========== FUNÇÕES DO BOT ==========
 def send_message(chat_id, text):
@@ -108,14 +127,14 @@ def process_command(update):
                 "📊 *REGISTROS:*\n"
                 "• /addkm KMsAtuais — Define os KMs Atuais\n"
                 "• /fuel Litros Valor — Registra abastecimento\n"
-                "• /maint Descrição KM — Registra manutenção\n\n"
+                "• /manu Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
                 "• /report — Resumo geral\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
-                "• /del maint Índice — Deleta manutenção\n\n"
-                "💡 *Dica:* Clique e Segure nos comandos para usar!"
+                "• /del manu Índice — Deleta manutenção\n\n"
+                "💡 *Dica:* Clique nos comandos para usar!"
             )
         
         elif text.startswith("/addkm"):
@@ -138,7 +157,7 @@ def process_command(update):
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
-        elif text.startswith("/maint"):
+        elif text.startswith("/manu"):
             try:
                 parts = text.split()
                 if len(parts) >= 3:
@@ -146,7 +165,7 @@ def process_command(update):
                     desc = " ".join(parts[1:-1])
                     km_value = int(parts[-1])  # Último argumento é o KM
                     
-                    bot_data["maintenance"].append({
+                    bot_data["manu"].append({
                         "desc": desc, 
                         "date": format_date(),
                         "km": km_value
@@ -154,22 +173,22 @@ def process_command(update):
                     save_to_gist(bot_data)
                     send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km")
                 else:
-                    send_message(chat_id, "❌ Use: `/maint Descrição KM`\nEx: `/maint Troca de óleo 15000`")
+                    send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
             except:
-                send_message(chat_id, "❌ Use: `/maint Descrição KM`\nEx: `/maint Troca de óleo 15000`")
+                send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
         
         elif text.startswith("/report"):
             msg = "🏍️ *RELATÓRIO*\n\n"
             
-            # KM - Com "|" corrigido
+            # KM
             msg += "📏 *KM:*\n"
             if bot_data["km"]:
                 for i, item in enumerate(bot_data["km"][-10:], 1):
-                    msg += f"{i}. {item['date']}|{item['km']} Km\n"
+                    msg += f"{i}. {item['date']}{item['km']} Km\n"
             else:
                 msg += "Nenhum registro\n"
             
-            # Abastecimentos - Sem total
+            # Abastecimentos
             msg += "\n⛽ *Abastecimentos:*\n"
             if bot_data["fuel"]:
                 for i, item in enumerate(bot_data["fuel"][-10:], 1):
@@ -177,10 +196,10 @@ def process_command(update):
             else:
                 msg += "Nenhum registro\n"
             
-            # Manutenções - Com KM específico
+            # Manutenções
             msg += "\n🧰 *Manutenções:*\n"
-            if bot_data["maintenance"]:
-                for i, item in enumerate(bot_data["maintenance"][-10:], 1):
+            if bot_data["manu"]:
+                for i, item in enumerate(bot_data["manu"][-10:], 1):
                     msg += f"{i}. {item['date']}{item['desc']}|{item['km']} Km\n"
             else:
                 msg += "Nenhum registro\n"
@@ -194,25 +213,25 @@ def process_command(update):
                     tipo = parts[1]
                     index = int(parts[2]) - 1
                     
-                    if tipo in ["km", "fuel", "maint"] and 0 <= index < len(bot_data[tipo]):
+                    if tipo in bot_data and 0 <= index < len(bot_data[tipo]):
                         bot_data[tipo].pop(index)
                         save_to_gist(bot_data)
                         send_message(chat_id, f"🗑️ Registro removido!")
                     else:
-                        send_message(chat_id, "❌ Índice inválido")
+                        send_message(chat_id, f"❌ Índice inválido para {tipo}. Use de 1 a {len(bot_data.get(tipo, []))}")
                 else:
-                    # Mensagem de erro específica para cada tipo
+                    # Mensagem de erro específica
                     if len(parts) == 2:
                         tipo = parts[1]
-                        if tipo in ["km", "fuel", "maint"]:
+                        if tipo in bot_data:
                             send_message(chat_id, f"❌ Use: `/del {tipo} 1`")
                         else:
-                            send_message(chat_id, "❌ Tipo inválido. Use: km, fuel ou maint")
+                            send_message(chat_id, "❌ Tipo inválido. Use: km, fuel ou manu")
                     else:
-                        send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del maint 1`")
+                        send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del manu 1`")
             except Exception as e:
                 print(f"❌ Erro no /del: {e}")
-                send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del maint 1`")
+                send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del manu 1`")
             
     except Exception as e:
         print(f"❌ Erro: {e}")
