@@ -91,6 +91,12 @@ def format_date():
     now = datetime.now()
     return f"|{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}|"
 
+def get_last_km():
+    """Pega o último KM registrado"""
+    if bot_data["km"]:
+        return bot_data["km"][-1]["km"]
+    return "N/A"
+
 def process_command(update):
     try:
         message = update.get("message", {})
@@ -142,9 +148,14 @@ def process_command(update):
             try:
                 desc = " ".join(text.split()[1:])
                 if desc:
-                    bot_data["maintenance"].append({"desc": desc, "date": format_date()})
+                    last_km = get_last_km()
+                    bot_data["maintenance"].append({
+                        "desc": desc, 
+                        "date": format_date(),
+                        "km": last_km
+                    })
                     save_to_gist(bot_data)
-                    send_message(chat_id, f"🧰 Manutenção registrada: {desc}")
+                    send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {last_km} Km")
                 else:
                     send_message(chat_id, "❌ Use: `/maint Troca de óleo`")
             except:
@@ -172,11 +183,12 @@ def process_command(update):
             else:
                 msg += "Nenhum registro\n"
             
-            # Manutenções - Formato novo com índice
+            # Manutenções - Formato novo com índice E KM
             msg += "\n🧰 *Manutenções:*\n"
             if bot_data["maintenance"]:
                 for i, item in enumerate(bot_data["maintenance"][-10:], 1):
-                    msg += f"{i}. {item['date']}{item['desc']}\n"
+                    km_info = f"|{item['km']} Km" if item.get('km') and item['km'] != "N/A" else ""
+                    msg += f"{i}. {item['date']}{item['desc']}{km_info}\n"
             else:
                 msg += "Nenhum registro\n"
             
