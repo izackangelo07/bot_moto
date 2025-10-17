@@ -3,21 +3,11 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Dispatcher, filters
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 import io
-
-import os
-
-creds_json = os.getenv("GOOGLE_CREDENTIALS")
-
-if creds_json is None:
-    print("❌ ERRO: GOOGLE_CREDENTIALS não encontrada!")
-else:
-    print("✅ GOOGLE_CREDENTIALS encontrada! Tamanho:", len(creds_json))
-
 
 # Nome do arquivo usado no Drive
 DRIVE_FILENAME = "moto_data.json"
@@ -25,6 +15,8 @@ DRIVE_FILENAME = "moto_data.json"
 # ========== GOOGLE DRIVE AUTH ==========
 def get_drive_service():
     creds_json = os.getenv("GOOGLE_CREDENTIALS")
+    if not creds_json:
+        raise ValueError("GOOGLE_CREDENTIALS não encontrada!")
     creds_dict = json.loads(creds_json)
     creds = service_account.Credentials.from_service_account_info(
         creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
@@ -168,8 +160,10 @@ async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
     upload_data(data)
     await update.message.reply_text(f"🗑️ Registro removido: {removido}")
 
-# ========== MAIN ==========
+# ========== MAIN / WEBHOOK ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+APP_URL = os.getenv("APP_URL")  # URL do Railway (ex: https://seuapp.up.railway.app)
+
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
@@ -179,4 +173,10 @@ app.add_handler(CommandHandler("maint", add_maintenance))
 app.add_handler(CommandHandler("report", report))
 app.add_handler(CommandHandler("del", delete_record))
 
-app.run_polling()
+# Rodar como webhook
+app.run_webhook(
+    listen="0.0.0.0",
+    port=int(os.environ.get("PORT", 8000)),
+    url_path=BOT_TOKEN,
+    webhook_url=f"{APP_URL}/{BOT_TOKEN}"
+)
