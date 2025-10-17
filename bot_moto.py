@@ -100,9 +100,52 @@ def get_last_km():
         return bot_data["km"][-1]["km"]
     return 0
 
+def total_fuel_mes():
+    """Calcula o total gasto em abastecimentos no mês atual"""
+    now = datetime.now()
+    mes_atual = now.month
+    ano_atual = now.year
+    
+    total = 0
+    for item in bot_data["fuel"]:
+        try:
+            # Extrair data do formato "17/10/25 às 14:30"
+            data_str = item['date'].split(' às ')[0]  # "17/10/25"
+            dia, mes, ano = map(int, data_str.split('/'))
+            ano_completo = 2000 + ano  # Converte "25" para 2025
+            
+            if mes == mes_atual and ano_completo == ano_atual:
+                total += item['price']
+        except:
+            continue
+    
+    return total
+
+def total_fuel_geral():
+    """Calcula o total gasto em todos os abastecimentos"""
+    total = 0
+    for item in bot_data["fuel"]:
+        total += item['price']
+    return total
+
 def generate_report():
-    """Gera o relatório completo"""
+    """Gera o relatório completo com gastos"""
     msg = "🏍️ *RELATÓRIO*\n\n"
+    
+    # Gastos
+    total_mes = total_fuel_mes()
+    total_geral = total_fuel_geral()
+    
+    now = datetime.now()
+    meses_pt = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+    }
+    nome_mes = meses_pt.get(now.month, now.strftime("%B"))
+    
+    msg += f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total_mes:.2f}\n\n"
+    msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n\n"
     
     # KM
     msg += "📏 *KM:*\n"
@@ -130,40 +173,6 @@ def generate_report():
     
     return msg
 
-def total_fuel_mes():
-    """Calcula o total gasto em abastecimentos no mês atual"""
-    now = datetime.now()
-    mes_atual = now.month
-    ano_atual = now.year
-    
-    total = 0
-    for item in bot_data["fuel"]:
-        try:
-            # Extrair data do formato "17/10/25 às 14:30"
-            data_str = item['date'].split(' às ')[0]  # "17/10/25"
-            dia, mes, ano = map(int, data_str.split('/'))
-            ano_completo = 2000 + ano  # Converte "25" para 2025
-            
-            if mes == mes_atual and ano_completo == ano_atual:
-                total += item['price']
-                print(f"🔍 Abastecimento {data_str}: R${item['price']:.2f}")
-        except Exception as e:
-            print(f"❌ Erro ao processar data: {e}")
-            continue
-    
-    print(f"💰 Total do mês: R$ {total:.2f}")
-    return total
-
-def total_fuel_geral():
-    """Calcula o total gasto em todos os abastecimentos"""
-    total = 0
-    for item in bot_data["fuel"]:
-        total += item['price']
-        print(f"🔍 Abastecimento: R${item['price']:.2f}")
-    
-    print(f"💰 Total geral: R$ {total:.2f}")
-    return total
-
 def process_command(update):
     try:
         message = update.get("message", {})
@@ -183,9 +192,7 @@ def process_command(update):
                 "• /fuel Litros Valor — Registra abastecimento\n"
                 "• /manu Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
-                "• /report — Resumo geral\n"
-                "• /totalfuelmes — Soma mensal do abastecimento em Reais\n"
-                "• /fuelgeral — Soma de todos abastecimentos em Reais\n\n"
+                "• /report — Resumo geral\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
@@ -253,22 +260,6 @@ def process_command(update):
         
         elif text.startswith("/report"):
             send_message(chat_id, generate_report())
-        
-        elif text.startswith("/totalfuelmes"):
-            total = total_fuel_mes()
-            now = datetime.now()
-            meses_pt = {
-                1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-                5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-                9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-            }
-            nome_mes = meses_pt.get(now.month, now.strftime("%B"))
-            send_message(chat_id, f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total:.2f}")
-        
-        elif text.startswith("/fuelgeral"):
-            print("🎯 COMANDO /fuelgeral DETECTADO!")
-            total = total_fuel_geral()
-            send_message(chat_id, f"💰 *GASTO TOTAL EM COMBUSTÍVEL*\nTotal: R$ {total:.2f}")
         
         elif text.startswith("/del"):
             try:
