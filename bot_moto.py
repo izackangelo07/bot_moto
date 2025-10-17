@@ -94,7 +94,7 @@ def format_date():
 def process_command(update):
     try:
         message = update.get("message", {})
-        chat_id = message.get("chat", {}).get("id")  # ⬅️ Só precisa aqui para responder
+        chat_id = message.get("chat", {}).get("id")
         text = message.get("text", "")
         
         if not chat_id or not text:
@@ -103,14 +103,19 @@ def process_command(update):
         print(f"📨 Comando: {text}")
         
         if text.startswith("/start"):
-            send_message(chat_id, 
+            send_message(chat_id,
                 "🏍️ *BOT MOTOMANUTENÇÃO*\n\n"
-                "✅ *SISTEMA COM BACKUP AUTOMÁTICO*\n\n"
-                "• `/addkm KMsAtuais` — define os KMs Atuais.\n"
-                "• `/fuel Litros Valor` — Registra a Quantidade de Litros Colocado + o Valor Total.\n"
-                "• `/maint DescriçãoDaManutenção` — Registra a Manutenção feita.\n"
-                "• `/report` — Retorna um Resumo Geral.\n"
-                "• `/del |km-fuel-maint| Index` — Deleta um Registro Indesejado.\n"
+                "📊 *REGISTROS:*\n"
+                "• /addkm KMsAtuais — Define os KMs Atuais\n"
+                "• /fuel Litros Valor — Registra abastecimento\n"
+                "• /maint Descrição — Registra manutenção\n\n"
+                "📋 *CONSULTAS:*\n"
+                "• /report — Resumo geral\n\n"
+                "⚙️ *GERENCIAMENTO:*\n"
+                "• /del km Índice — Deleta KM\n"
+                "• /del fuel Índice — Deleta abastecimento\n"
+                "• /del maint Índice — Deleta manutenção\n\n"
+                "💡 *Dica:* Clique nos comandos para usar!"
             )
         
         elif text.startswith("/addkm"):
@@ -198,7 +203,7 @@ def process_command(update):
     except Exception as e:
         print(f"❌ Erro: {e}")
 
-# ========== RESTANTE DO CÓDIGO (MESMO) ==========
+# ========== POLLING ==========
 def polling_loop():
     print("🔄 Iniciando polling...")
     offset = 0
@@ -228,6 +233,7 @@ def polling_loop():
             print(f"❌ Erro: {e}")
             time.sleep(10)
 
+# ========== HTTP SERVER ==========
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -242,6 +248,7 @@ def start_http_server():
     print(f"🌐 HTTP Server rodando na porta {PORT}")
     server.serve_forever()
 
+# ========== INICIALIZAÇÃO ==========
 if __name__ == "__main__":
     http_thread = Thread(target=start_http_server, daemon=True)
     http_thread.start()
