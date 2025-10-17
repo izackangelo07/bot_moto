@@ -115,7 +115,7 @@ def process_command(update):
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
                 "• /del maint Índice — Deleta manutenção\n\n"
-                "💡 *Dica:* Clique nos comandos para usar!"
+                "💡 *Dica:* Clique e Segure nos comandos para usar!"
             )
         
         elif text.startswith("/addkm"):
@@ -165,7 +165,7 @@ def process_command(update):
             msg += "📏 *KM:*\n"
             if bot_data["km"]:
                 for i, item in enumerate(bot_data["km"][-10:], 1):
-                    msg += f"{i}. {item['date']}{item['km']} Km\n"
+                    msg += f"{i}. {item['date']}|{item['km']} Km\n"
             else:
                 msg += "Nenhum registro\n"
             
@@ -201,9 +201,18 @@ def process_command(update):
                     else:
                         send_message(chat_id, "❌ Índice inválido")
                 else:
-                    send_message(chat_id, "❌ Use: `/del km 1`")
-            except:
-                send_message(chat_id, "❌ Use: `/del km 1`")
+                    # Mensagem de erro específica para cada tipo
+                    if len(parts) == 2:
+                        tipo = parts[1]
+                        if tipo in ["km", "fuel", "maint"]:
+                            send_message(chat_id, f"❌ Use: `/del {tipo} 1`")
+                        else:
+                            send_message(chat_id, "❌ Tipo inválido. Use: km, fuel ou maint")
+                    else:
+                        send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del maint 1`")
+            except Exception as e:
+                print(f"❌ Erro no /del: {e}")
+                send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del maint 1`")
             
     except Exception as e:
         print(f"❌ Erro: {e}")
