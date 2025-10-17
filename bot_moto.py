@@ -372,9 +372,6 @@ def process_command(update):
         message = update.get("message", {})
         chat_id = message.get("chat", {}).get("id")
         text = message.get("text", "")
-
-        chat_id = message.get("chat", {}).get("id")
-        print(f"💬 Chat ID: {chat_id}")  # Vai aparecer nos logs
         
         if not chat_id or not text:
             return
