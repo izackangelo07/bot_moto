@@ -13,13 +13,17 @@ print("🚀 BOT MOTOMANUTENÇÃO INICIANDO...")
 
 # ========== CONFIGURAÇÃO ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+APP_URL = "https://botmoto-production.up.railway.app"
+PORT = int(os.environ.get("PORT", 8080))
 DRIVE_FILENAME = "moto_data.json"
+
+print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
+print(f"🌐 URL: {APP_URL}")
+print(f"🔧 Porta: {PORT}")
 
 if not BOT_TOKEN:
     print("❌ BOT_TOKEN não encontrado!")
     exit(1)
-
-print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
 
 # ========== GOOGLE DRIVE ==========
 def get_drive_service():
@@ -59,7 +63,6 @@ def download_data():
         if not file_id:
             return {"km": [], "fuel": [], "maintenance": []}
 
-        # Download simplificado
         request = drive_service.files().get_media(fileId=file_id)
         file_content = request.execute()
         return json.loads(file_content.decode('utf-8'))
@@ -125,8 +128,8 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = download_data()
     msg = "🏍️ *RELATÓRIO*\n\n"
     
-    msg += "📏 KM:\n" + "\n".join([f"• {d['date']} - {d['km']} km" for d in data["km"][-5:]]) + "\n\n"
-    msg += "⛽ Abastecimentos:\n" + "\n".join([f"• {d['date']} - {d['liters']}L" for d in data["fuel"][-5:]])
+    msg += "📏 KM:\n" + ("\n".join([f"• {d['date']} - {d['km']} km" for d in data["km"][-5:]]) or "Nenhum registro") + "\n\n"
+    msg += "⛽ Abastecimentos:\n" + ("\n".join([f"• {d['date']} - {d['liters']}L a R$ {d['price']:.2f}" for d in data["fuel"][-5:]]) or "Nenhum registro")
     
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -139,21 +142,12 @@ app.add_handler(CommandHandler("report", report))
 
 print("🎉 Bot configurado!")
 
-# ========== EXECUÇÃO ==========
-if __name__ == "__main__":
-    # No Railway usa WEBHOOK, local usa POLLING
-    if os.environ.get("PORT"):
-        print("🌐 Iniciando WEBHOOK no Railway...")
-        PORT = int(os.environ.get("PORT", 8080))
-        APP_URL = "https://botmoto-production.up.railway.app"
-        
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            webhook_url=f"{APP_URL}/{BOT_TOKEN}",
-            url_path=BOT_TOKEN,
-            drop_pending_updates=True
-        )
-    else:
-        print("🔄 Iniciando POLLING local...")
-        app.run_polling()
+# ========== WEBHOOK NO RAILWAY ==========
+print("🌐 Iniciando WEBHOOK...")
+app.run_webhook(
+    listen="0.0.0.0",
+    port=PORT,
+    webhook_url=f"{APP_URL}/{BOT_TOKEN}",
+    url_path=BOT_TOKEN,
+    drop_pending_updates=True
+)
