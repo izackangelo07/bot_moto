@@ -16,7 +16,7 @@ DRIVE_FILENAME = "moto_data.json"
 def get_drive_service():
     creds_json = os.getenv("GOOGLE_CREDENTIALS")
     if not creds_json:
-        raise ValueError("GOOGLE_CREDENTIALS não encontrada!")
+        raise ValueError("❌ GOOGLE_CREDENTIALS não encontrada!")
     creds_dict = json.loads(creds_json)
     creds = service_account.Credentials.from_service_account_info(
         creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
@@ -162,7 +162,12 @@ async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ========== MAIN / WEBHOOK ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-APP_URL = os.getenv("APP_URL")  # URL do Railway (ex: https://seuapp.up.railway.app)
+APP_URL = os.getenv("APP_URL")  # URL pública do Railway
+
+# DEBUG prints
+print("✅ Iniciando Bot...")
+print("APP_URL:", APP_URL)
+print("BOT_TOKEN:", BOT_TOKEN[:5] + "...")  # não mostra todo token
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
