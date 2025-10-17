@@ -131,7 +131,7 @@ def generate_report():
     return msg
 
 def total_fuel_mes():
-    """Calcula o total gasto em abastecimentos no mês atual - SOMA APENAS OS VALORES"""
+    """Calcula o total gasto em abastecimentos no mês atual"""
     now = datetime.now()
     mes_atual = now.month
     ano_atual = now.year
@@ -145,7 +145,6 @@ def total_fuel_mes():
             ano_completo = 2000 + ano  # Converte "25" para 2025
             
             if mes == mes_atual and ano_completo == ano_atual:
-                # CORREÇÃO: Soma apenas o valor (price), não multiplica por litros
                 total += item['price']
                 print(f"🔍 Abastecimento {data_str}: R${item['price']:.2f}")
         except Exception as e:
@@ -156,10 +155,9 @@ def total_fuel_mes():
     return total
 
 def total_fuel_geral():
-    """Calcula o total gasto em todos os abastecimentos - SOMA APENAS OS VALORES"""
+    """Calcula o total gasto em todos os abastecimentos"""
     total = 0
     for item in bot_data["fuel"]:
-        # CORREÇÃO: Soma apenas o valor (price), não multiplica por litros
         total += item['price']
         print(f"🔍 Abastecimento: R${item['price']:.2f}")
     
@@ -198,7 +196,6 @@ def process_command(update):
         elif text.startswith("/addkm"):
             try:
                 km_value = int(text.split()[1])
-                # Verifica se o KM já é o último registrado
                 last_km = get_last_km()
                 if km_value == last_km:
                     send_message(chat_id, f"⚠️ KM {km_value} já é o último registrado")
@@ -229,14 +226,12 @@ def process_command(update):
                     desc = " ".join(parts[1:-1])
                     km_value = int(parts[-1])
                     
-                    # VERIFICAÇÃO: Só adiciona KM se for diferente do último
                     last_km = get_last_km()
                     km_added = False
                     if km_value != last_km:
                         bot_data["km"].append({"km": km_value, "date": format_date()})
                         km_added = True
                     
-                    # Registra manutenção
                     bot_data["manu"].append({
                         "desc": desc, 
                         "date": format_date(),
@@ -262,7 +257,6 @@ def process_command(update):
         elif text.startswith("/totalfuelmes"):
             total = total_fuel_mes()
             now = datetime.now()
-            # Nome do mês em português
             meses_pt = {
                 1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
                 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
@@ -272,6 +266,7 @@ def process_command(update):
             send_message(chat_id, f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total:.2f}")
         
         elif text.startswith("/fuelgeral"):
+            print("🎯 COMANDO /fuelgeral DETECTADO!")
             total = total_fuel_geral()
             send_message(chat_id, f"💰 *GASTO TOTAL EM COMBUSTÍVEL*\nTotal: R$ {total:.2f}")
         
