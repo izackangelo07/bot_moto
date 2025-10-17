@@ -13,13 +13,9 @@ print("🚀 BOT MOTOMANUTENÇÃO INICIANDO...")
 
 # ========== CONFIGURAÇÃO ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-APP_URL = "https://botmoto-production.up.railway.app"
-PORT = int(os.environ.get("PORT", 8080))
 DRIVE_FILENAME = "moto_data.json"
 
 print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
-print(f"🌐 URL: {APP_URL}")
-print(f"🔧 Porta: {PORT}")
 
 if not BOT_TOKEN:
     print("❌ BOT_TOKEN não encontrado!")
@@ -124,30 +120,77 @@ async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         await update.message.reply_text("❌ Use: `/fuel 10 5.50`", parse_mode="Markdown")
 
+async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        desc = " ".join(context.args)
+        data = download_data()
+        data["maintenance"].append({"date": format_date(), "desc": desc})
+        upload_data(data)
+        await update.message.reply_text(f"🧰 {desc}")
+    except:
+        await update.message.reply_text("❌ Use: `/maint Troca de óleo`", parse_mode="Markdown")
+
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = download_data()
     msg = "🏍️ *RELATÓRIO*\n\n"
     
     msg += "📏 KM:\n" + ("\n".join([f"• {d['date']} - {d['km']} km" for d in data["km"][-5:]]) or "Nenhum registro") + "\n\n"
-    msg += "⛽ Abastecimentos:\n" + ("\n".join([f"• {d['date']} - {d['liters']}L a R$ {d['price']:.2f}" for d in data["fuel"][-5:]]) or "Nenhum registro")
+    msg += "⛽ Abastecimentos:\n" + ("\n".join([f"• {d['date']} - {d['liters']}L a R$ {d['price']:.2f}" for d in data["fuel"][-5:]]) or "Nenhum registro") + "\n\n"
+    msg += "🧰 Manutenções:\n" + ("\n".join([f"• {d['date']} - {d['desc']}" for d in data["maintenance"][-5:]]) or "Nenhum registro")
     
     await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        tipo, index = context.args[0], int(context.args[1]) - 1
+        if tipo not in ["km", "fuel", "maint"]:
+            await update.message.reply_text("❌ Tipo inválido")
+            return
+            
+        data = download_data()
+        if 0 <= index < len(data[tipo]):
+            removido = data[tipo].pop(index)
+            upload_data(data)
+            await update.message.reply_text(f"🗑️ Removido: {removido}")
+        else:
+            await update.message.reply_text("❌ Índice inválido")
+    except:
+        await update.message.reply_text("❌ Use: `/del km 1`", parse_mode="Markdown")
 
 # ========== INICIALIZAÇÃO ==========
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("addkm", add_km))
 app.add_handler(CommandHandler("fuel", add_fuel))
+app.add_handler(CommandHandler("maint", add_maintenance))
 app.add_handler(CommandHandler("report", report))
+app.add_handler(CommandHandler("del", delete_record))
 
 print("🎉 Bot configurado!")
 
-# ========== WEBHOOK NO RAILWAY ==========
-print("🌐 Iniciando WEBHOOK...")
-app.run_webhook(
-    listen="0.0.0.0",
-    port=PORT,
-    webhook_url=f"{APP_URL}/{BOT_TOKEN}",
-    url_path=BOT_TOKEN,
-    drop_pending_updates=True
-)
+# ========== POLLING COM TRATAMENTO DE ERRO ==========
+print("🔄 Iniciando POLLING...")
+
+try:
+    # Tentar polling com configurações que evitam conflito
+    app.run_polling(
+        poll_interval=1.0,
+        timeout=10,
+        drop_pending_updates=True,
+        allowed_updates=['message', 'callback_query']
+    )
+except Exception as e:
+    print(f"❌ Erro no polling: {e}")
+    print("💤 Tentando novamente em 30 segundos...")
+    import time
+    time.sleep(30)
+    
+    # Tentar uma vez mais
+    try:
+        app.run_polling(
+            poll_interval=2.0,
+            timeout=15,
+            drop_pending_updates=True
+        )
+    except Exception as e2:
+        print(f"❌ Erro final: {e2}")
