@@ -151,18 +151,7 @@ def generate_report():
             msg += f"{i}. |{item['date']}|{item['km']} Km\n"
     else:
         msg += "Nenhum registro\n"
-    
-    # Abastecimentos
-    msg += "\n⛽ *Abastecimentos:*\n"
-    if bot_data["fuel"]:
-        for i, item in enumerate(bot_data["fuel"][-10:], 1):
-            msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
-    else:
-        msg += "Nenhum registro\n"
 
-    msg += f"\n          💰 *GASTO MENSAL* \n📅*Período*:({nome_mes})\n          Total: R$ {total_mes:.2f}\n\n"
-    msg += f"            💰 *GASTO TOTAL*\n           Total: R$ {total_geral:.2f}\n"
-    
     # Manutenções
     msg += "\n🧰 *Manutenções:*\n"
     if bot_data["manu"]:
@@ -172,7 +161,18 @@ def generate_report():
         msg += "Nenhum registro\n"
     
     return msg
+    
+    # Abastecimentos
+    msg += "\n⛽ *Abastecimentos:*\n"
+    if bot_data["fuel"]:
+        for i, item in enumerate(bot_data["fuel"][-10:], 1):
+            msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
+    else:
+        msg += "Nenhum registro\n"
 
+    msg += f"\n     💰 *GASTO MENSAL* 📅*Período*:({nome_mes})\n          Total: R$ {total_mes:.2f}\n\n"
+    msg += f"       💰 *GASTO TOTAL*\n           Total: R$ {total_geral:.2f}\n"
+    
 def process_command(update):
     try:
         message = update.get("message", {})
