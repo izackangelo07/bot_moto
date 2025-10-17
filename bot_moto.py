@@ -89,7 +89,7 @@ def send_message(chat_id, text):
 
 def format_date():
     now = datetime.now()
-    return f"{now.day:02d}/{now.month:02d} {now.hour:02d}:{now.minute:02d}"
+    return f"|{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}|"
 
 def process_command(update):
     try:
@@ -153,30 +153,30 @@ def process_command(update):
         elif text.startswith("/report"):
             msg = "🏍️ *RELATÓRIO*\n\n"
             
-            # KM
+            # KM - Formato novo com índice
             msg += "📏 *KM:*\n"
             if bot_data["km"]:
-                for item in bot_data["km"][-10:]:
-                    msg += f"• {item['date']} - {item['km']} km\n"
+                for i, item in enumerate(bot_data["km"][-10:], 1):
+                    msg += f"{i}. {item['date']}{item['km']} Km\n"
             else:
                 msg += "Nenhum registro\n"
             
-            # Abastecimentos
+            # Abastecimentos - Formato novo com índice
             msg += "\n⛽ *Abastecimentos:*\n"
             if bot_data["fuel"]:
                 total_litros = sum(item['liters'] for item in bot_data["fuel"])
                 total_gasto = sum(item['liters'] * item['price'] for item in bot_data["fuel"])
-                for item in bot_data["fuel"][-10:]:
-                    msg += f"• {item['date']} - {item['liters']}L a R$ {item['price']:.2f}\n"
+                for i, item in enumerate(bot_data["fuel"][-10:], 1):
+                    msg += f"{i}. {item['date']}{item['liters']}L por R${item['price']:.2f}\n"
                 msg += f"\n📊 Total: {total_litros:.1f}L | R$ {total_gasto:.2f}\n"
             else:
                 msg += "Nenhum registro\n"
             
-            # Manutenções
+            # Manutenções - Formato novo com índice
             msg += "\n🧰 *Manutenções:*\n"
             if bot_data["maintenance"]:
-                for item in bot_data["maintenance"][-10:]:
-                    msg += f"• {item['date']} - {item['desc']}\n"
+                for i, item in enumerate(bot_data["maintenance"][-10:], 1):
+                    msg += f"{i}. {item['date']}{item['desc']}\n"
             else:
                 msg += "Nenhum registro\n"
             
