@@ -162,7 +162,7 @@ def send_daily_notification():
         if current_km > 0:
             alert_msg = check_oil_change_alert(current_km)
             if alert_msg:
-                notification = f"```🔔*MANUTENÇÃO MOTO*🔔```\n{alert_msg}"
+                notification = f" ``` 🔔 *MANUTENÇÃO MOTO* 🔔 ``` \n{alert_msg}"
                 send_message(NOTIFICATION_CHAT_ID, notification)
                 print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
     except Exception as e:
@@ -359,7 +359,7 @@ def notification_scheduler():
             current_minute = now.minute
             
             # Verificar se é 8:00 OU 22:30 e ainda não notificou nesse horário
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 23)) and last_notification_hour != current_hour:
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 33)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
@@ -475,42 +475,47 @@ def process_command(update):
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
         elif text.startswith("/manu"):
-            try:
-                parts = text.split()
-                if len(parts) >= 3:
-                    desc = " ".join(parts[1:-1])
-                    km_value = int(parts[-1])
-                    
-                    last_km = get_last_km()
-                    km_added = False
-                    if km_value != last_km:
-                        bot_data["km"].append({"km": km_value, "date": format_date()})
-                        km_added = True
-                    
-                    bot_data["manu"].append({
-                        "desc": desc, 
-                        "date": format_date(),
-                        "km": km_value
-                    })
-                    
-                    save_to_gist(bot_data)
-                    
-                    if km_added:
-                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
-                    else:
-                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
-
-                    send_message(chat_id, generate_report())
+    try:
+        parts = text.split()
+        if len(parts) >= 3:
+            desc = " ".join(parts[1:-1])
+            km_value = int(parts[-1])
             
-                    # Se for troca de óleo, enviar mensagem especial
-                    oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
-                    if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
-                        send_message(chat_id, "🔧 *TROCA DE ÓLEO REGISTRADA! PRÓXIMO ALERTA EM 1000KM*")
-                        
-                else:
-                    send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
-            except:
-                send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
+            last_km = get_last_km()
+            km_added = False
+            if km_value != last_km:
+                bot_data["km"].append({"km": km_value, "date": format_date()})
+                km_added = True
+            
+            bot_data["manu"].append({
+                "desc": desc, 
+                "date": format_date(),
+                "km": km_value
+            })
+            
+            save_to_gist(bot_data)
+            
+            if km_added:
+                send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
+            else:
+                send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
+
+            send_message(chat_id, generate_report())
+    
+            # Se for troca de óleo, enviar mensagem especial
+            oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
+            if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
+                send_message(chat_id, "🔧 *TROCA DE ÓLEO REGISTRADA! PRÓXIMO ALERTA EM 1000KM*")
+            else:
+                # Verificar alerta de troca de óleo - usar o último KM registrado
+                current_km = get_last_km()
+                alert_msg = check_oil_change_alert(current_km)
+                if alert_msg:  # ← FALTANDO ESTE IF
+                    send_message(chat_id, alert_msg)  # ← CORRIGIR INDENTAÇÃO
+        else:
+            send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
+    except:
+        send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
         
         elif text.startswith("/report"):
             send_message(chat_id, generate_report())
