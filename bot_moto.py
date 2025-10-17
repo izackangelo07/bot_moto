@@ -12,29 +12,35 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 import io
 
+# ========== INICIALIZAÇÃO E CONFIGURAÇÃO ==========
 print("🚀 BOT MANUTENÇÃO - MOTO - GITHUB GIST")
 
-# ========== CONFIGURAÇÃO ==========
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-GIST_ID = os.getenv("GIST_ID")
-PORT = int(os.environ.get("PORT", 8080))
-DELETE_PASSWORD = os.getenv("DELETE_PASSWORD", "123456")  # Senha padrão para deletar
-NOTIFICATION_CHAT_ID = os.getenv("NOTIFICATION_CHAT_ID")  # Chat ID para notificações
+# Configurações das variáveis de ambiente
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Token do bot do Telegram
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Token de acesso do GitHub
+GIST_ID = os.getenv("GIST_ID")  # ID do Gist para armazenar dados
+PORT = int(os.environ.get("PORT", 8080))  # Porta do servidor web
+DELETE_PASSWORD = os.getenv("DELETE_PASSWORD", "123456")  # Senha para deletar todos os dados
+NOTIFICATION_CHAT_ID = os.getenv("NOTIFICATION_CHAT_ID")  # Chat ID para notificações automáticas
 
-# Limpar URL do Gist_ID se necessário
+# Limpar URL do Gist se fornecida como URL completa
 if GIST_ID and "github.com" in GIST_ID:
     GIST_ID = GIST_ID.split("/")[-1]
 
+# Log das configurações (ocultando informações sensíveis)
 print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
 print(f"✅ GitHub Token: {GITHUB_TOKEN[:10]}..." if GITHUB_TOKEN else "❌ GitHub Token")
 print(f"✅ Gist ID: {GIST_ID}" if GIST_ID else "❌ Gist ID")
 print(f"✅ Delete Password: {DELETE_PASSWORD[:2]}..." if DELETE_PASSWORD else "❌ Delete Password")
 print(f"✅ Notification Chat ID: {NOTIFICATION_CHAT_ID}" if NOTIFICATION_CHAT_ID else "❌ Notification Chat ID")
 
-# ========== GITHUB GIST FUNCTIONS ==========
+# ========== FUNÇÕES DE GITHUB GIST ==========
+
 def load_from_gist():
-    """Carrega dados do Gist"""
+    """
+    Carrega os dados do Gist do GitHub
+    Retorna dicionário com listas vazias se não conseguir carregar
+    """
     if not GITHUB_TOKEN or not GIST_ID:
         return {"km": [], "fuel": [], "manu": []}
     
@@ -58,7 +64,10 @@ def load_from_gist():
         return {"km": [], "fuel": [], "manu": []}
 
 def save_to_gist(data):
-    """Salva dados no Gist"""
+    """
+    Salva os dados no Gist do GitHub
+    Retorna True se salvou com sucesso, False se falhou
+    """
     if not GITHUB_TOKEN or not GIST_ID:
         return False
     
@@ -82,14 +91,18 @@ def save_to_gist(data):
     except:
         return False
 
-# ========== INICIALIZAR DADOS ==========
+# ========== CARREGAMENTO INICIAL DOS DADOS ==========
 print("📂 Carregando dados...")
 bot_data = load_from_gist()
 print(f"📊 Dados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos, {len(bot_data['manu'])} manutenções")
 
-# ========== FUNÇÕES DO BOT ==========
+# ========== FUNÇÕES PRINCIPAIS DO BOT ==========
+
 def send_message(chat_id, text):
-    """Função simplificada - só precisa do chat_id para responder"""
+    """
+    Envia mensagem para um chat específico do Telegram
+    Usa parse_mode Markdown para formatação
+    """
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     try:
@@ -98,7 +111,10 @@ def send_message(chat_id, text):
         pass
 
 def send_document(chat_id, document, filename):
-    """Envia documento (PDF) para o chat"""
+    """
+    Envia documento PDF para o chat do Telegram
+    Retorna True se enviou com sucesso
+    """
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
     files = {'document': (filename, document, 'application/pdf')}
     data = {'chat_id': chat_id}
@@ -110,19 +126,29 @@ def send_document(chat_id, document, filename):
         return False
 
 def format_date():
-    """Data e hora no fuso de São Paulo"""
+    """
+    Retorna data e hora atual formatada no fuso de São Paulo
+    Formato: DD/MM/AA às HH:MM
+    """
     tz_sp = pytz.timezone('America/Sao_Paulo')
     now = datetime.now(tz_sp)
     return f"{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}"
 
 def get_last_km():
-    """Pega o último KM registrado para evitar duplicação"""
+    """
+    Retorna o último KM registrado
+    Retorna 0 se não houver registros
+    """
     if bot_data["km"]:
         return bot_data["km"][-1]["km"]
     return 0
 
 def get_last_oil_change():
-    """Encontra a última troca de óleo e retorna o KM"""
+    """
+    Encontra a última troca de óleo registrada
+    Procura por palavras-chave nas descrições de manutenção
+    Retorna o KM da última troca ou 0 se não encontrou
+    """
     oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
     
     for manu in reversed(bot_data["manu"]):
@@ -132,7 +158,10 @@ def get_last_oil_change():
     return 0
 
 def check_oil_change_alert(current_km):
-    """Verifica se está próximo da troca de óleo (a cada 1000km)"""
+    """
+    Verifica se está próximo da troca de óleo (a cada 1000km)
+    Retorna mensagem de alerta apropriada ou None se não há alerta
+    """
     last_oil_km = get_last_oil_change()
     
     if last_oil_km == 0:
@@ -141,6 +170,7 @@ def check_oil_change_alert(current_km):
     km_since_last_oil = current_km - last_oil_km
     km_remaining = 1000 - km_since_last_oil
     
+    # Sistema de alertas progressivos
     if km_since_last_oil >= 1000:
         return f"🚨🚨🚨 *ALERTA URGENTE:* JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO! TROQUE O ÓLEO IMEDIATAMENTE! 🚨🚨🚨"
     elif km_remaining <= 100:
@@ -153,7 +183,10 @@ def check_oil_change_alert(current_km):
     return None
 
 def send_daily_notification():
-    """Envia notificação diária sobre status do óleo"""
+    """
+    Envia notificação diária sobre status do óleo
+    Só envia se houver um alerta ativo e chat ID configurado
+    """
     if not NOTIFICATION_CHAT_ID:
         return
     
@@ -169,7 +202,10 @@ def send_daily_notification():
         print(f"❌ Erro na notificação: {e}")
 
 def total_fuel_mes():
-    """Calcula o total gasto em abastecimentos no mês atual"""
+    """
+    Calcula o total gasto em abastecimentos no mês atual
+    Considera apenas registros do mês e ano corrente
+    """
     now = datetime.now()
     mes_atual = now.month
     ano_atual = now.year
@@ -189,23 +225,29 @@ def total_fuel_mes():
     return total
 
 def total_fuel_geral():
-    """Calcula o total gasto em todos os abastecimentos"""
+    """
+    Calcula o total gasto em todos os abastecimentos registrados
+    """
     total = 0
     for item in bot_data["fuel"]:
         total += item['price']
     return total
 
 def generate_pdf():
-    """Gera um PDF com a mesma formatação do /report (SEM LIMITE)"""
+    """
+    Gera um PDF completo com todos os registros
+    Inclui KM, manutenções, abastecimentos e gastos
+    Retorna buffer do PDF ou None em caso de erro
+    """
     try:
         # Criar buffer para o PDF
         buffer = io.BytesIO()
         
-        # Criar documento
+        # Configurar documento PDF
         doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30)
         styles = getSampleStyleSheet()
         
-        # Estilo simples igual ao report
+        # Estilos personalizados
         normal_style = ParagraphStyle(
             'CustomNormal',
             parent=styles['Normal'],
@@ -247,7 +289,7 @@ def generate_pdf():
         }
         nome_mes = meses_pt.get(now.month, now.strftime("%B"))
         
-        # KM (TODOS os registros)
+        # Seção de KM (todos os registros)
         story.append(Paragraph("<b>📏 KM:</b>", normal_style))
         if bot_data["km"]:
             for i, item in enumerate(bot_data["km"], 1):
@@ -257,7 +299,7 @@ def generate_pdf():
         
         story.append(Spacer(1, 10))
         
-        # Manutenções (TODOS os registros)
+        # Seção de Manutenções (todos os registros)
         story.append(Paragraph("<b>🧰 Manutenções:</b>", normal_style))
         if bot_data["manu"]:
             for i, item in enumerate(bot_data["manu"], 1):
@@ -267,7 +309,7 @@ def generate_pdf():
         
         story.append(Spacer(1, 10))
         
-        # Abastecimentos (TODOS os registros)
+        # Seção de Abastecimentos (todos os registros)
         story.append(Paragraph("<b>⛽ Abastecimentos:</b>", normal_style))
         if bot_data["fuel"]:
             for i, item in enumerate(bot_data["fuel"], 1):
@@ -277,7 +319,7 @@ def generate_pdf():
         
         story.append(Spacer(1, 15))
         
-        # Gastos
+        # Seção de Gastos
         story.append(Paragraph(f"<b>💰 GASTO MENSAL  📅 Período: ({nome_mes})</b>", normal_style))
         story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal_style))
         story.append(Spacer(1, 5))
@@ -295,10 +337,14 @@ def generate_pdf():
         return None
 
 def generate_report():
-    """Gera o relatório completo com gastos (apenas últimos 5 registros)"""
+    """
+    Gera relatório resumido para o Telegram
+    Mostra apenas os últimos 5 registros de cada categoria
+    Inclui gastos mensais e totais
+    """
     msg = "🏍️ *RELATÓRIO*\n\n"
     
-    # Gastos
+    # Cálculo de gastos
     total_mes = total_fuel_mes()
     total_geral = total_fuel_geral()
     
@@ -310,19 +356,17 @@ def generate_report():
     }
     nome_mes = meses_pt.get(now.month, now.strftime("%B"))
     
-    # KM (apenas últimos 5) - calcular índices corretos
+    # Seção de KM (últimos 5 registros)
     msg += "📏 *KM (últimos 5):*\n"
     if bot_data["km"]:
-        # Pegar os últimos 5 registros
         last_km = bot_data["km"][-5:]
-        # Calcular o índice inicial correto
         start_index = len(bot_data["km"]) - len(last_km) + 1
         for i, item in enumerate(last_km, start_index):
             msg += f"{i}. |{item['date']}|{item['km']} Km\n"
     else:
         msg += "Nenhum registro\n"
 
-    # Manutenções (apenas últimas 5) - calcular índices corretos
+    # Seção de Manutenções (últimas 5)
     msg += "\n🧰 *Manutenções (últimas 5):*\n"
     if bot_data["manu"]:
         last_manu = bot_data["manu"][-5:]
@@ -332,7 +376,7 @@ def generate_report():
     else:
         msg += "Nenhum registro\n"
     
-    # Abastecimentos (apenas últimos 5) - calcular índices corretos
+    # Seção de Abastecimentos (últimos 5)
     msg += "\n⛽ *Abastecimentos (últimos 5):*\n"
     if bot_data["fuel"]:
         last_fuel = bot_data["fuel"][-5:]
@@ -342,13 +386,18 @@ def generate_report():
     else:
         msg += "Nenhum registro\n"
 
+    # Seção de Gastos
     msg += f"\n💰 *GASTO MENSAL*  📅*Período*:({nome_mes})\nTotal: R$ {total_mes:.2f}\n\n"
     msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n"
 
     return msg
 
 def notification_scheduler():
-    """Agendador de notificações diárias às 8:00 e 22:30"""
+    """
+    Agendador de notificações diárias
+    Verifica horários específicos (8:00 e 19:33) e envia notificações
+    Controla para enviar apenas uma notificação por horário por dia
+    """
     print("⏰ Iniciando agendador de notificações...")
     last_notification_hour = None
     
@@ -358,20 +407,26 @@ def notification_scheduler():
             current_hour = now.hour
             current_minute = now.minute
             
-            # Verificar se é 8:00 OU 22:30 e ainda não notificou nesse horário
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 35)) and last_notification_hour != current_hour:
+            # Verificar horários configurados (8:00 e 19:33)
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 33)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
-                time.sleep(61)  # Espera 1 minuto para evitar múltiplos envios
+                time.sleep(61)  # Evita múltiplos envios no mesmo minuto
             else:
                 time.sleep(30)  # Verifica a cada 30 segundos
                 
         except Exception as e:
             print(f"❌ Erro no agendador: {e}")
             time.sleep(60)
-    
+
+# ========== PROCESSAMENTO DE COMANDOS ==========
+
 def process_command(update):
+    """
+    Processa comandos recebidos do Telegram
+    Gerencia todos os comandos disponíveis no bot
+    """
     try:
         message = update.get("message", {})
         chat_id = message.get("chat", {}).get("id")
@@ -382,6 +437,7 @@ def process_command(update):
         
         print(f"📨 Comando: {text}")
         
+        # Comando /start - Menu principal
         if text.startswith("/start"):
             send_message(chat_id,
                 "🏍️ *BOT MANUTENÇÃO - MOTO*\n\n"
@@ -402,6 +458,7 @@ def process_command(update):
                 "💡 *Dica:* Clique e segure nos comandos para usar!"
             )
         
+        # Comando /delete - Apaga todos os dados (com senha)
         elif text.startswith("/delete"):
             try:
                 parts = text.split()
@@ -414,6 +471,7 @@ def process_command(update):
                         total_fuel = len(bot_data["fuel"])
                         total_manu = len(bot_data["manu"])
                         
+                        # Limpar todos os dados
                         bot_data["km"] = []
                         bot_data["fuel"] = []
                         bot_data["manu"] = []
@@ -434,6 +492,7 @@ def process_command(update):
                 print(f"❌ Erro no /delete: {e}")
                 send_message(chat_id, "❌ Use: `/delete SENHA`")
         
+        # Comando /addkm - Registra novo quilometragem
         elif text.startswith("/addkm"):
             try:
                 km_value = int(text.split()[1])
@@ -455,6 +514,7 @@ def process_command(update):
             except:
                 send_message(chat_id, "❌ Use: `/addkm 15000`")
         
+        # Comando /fuel - Registra abastecimento
         elif text.startswith("/fuel"):
             try:
                 parts = text.split()
@@ -465,7 +525,7 @@ def process_command(update):
                 send_message(chat_id, f"⛽ Abastecimento: {liters}L a R$ {price:.2f}")
                 send_message(chat_id, generate_report())
                 
-                # Verificar alerta de troca de óleo - usar o último KM registrado
+                # Verificar alerta de troca de óleo
                 current_km = get_last_km()
                 alert_msg = check_oil_change_alert(current_km)
                 if alert_msg:
@@ -474,59 +534,65 @@ def process_command(update):
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
-            elif text.startswith("/manu"):
-                try:
-                    parts = text.split()
-                    if len(parts) >= 3:
-                        desc = " ".join(parts[1:-1])
-                        km_value = int(parts[-1])
-                        
-                        last_km = get_last_km()
-                        km_added = False
-                        if km_value != last_km:
-                            bot_data["km"].append({"km": km_value, "date": format_date()})
-                            km_added = True
-                        
-                        bot_data["manu"].append({
-                            "desc": desc, 
-                            "date": format_date(),
-                            "km": km_value
-                        })
-                        
-                        save_to_gist(bot_data)
-                        
-                        if km_added:
-                            send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
-                        else:
-                            send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
-    
-                        send_message(chat_id, generate_report())
-                
-                        # Se for troca de óleo, enviar mensagem especial
-                        oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
-                        if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
-                            send_message(chat_id, "🔧 *TROCA DE ÓLEO REGISTRADA! PRÓXIMO ALERTA EM 1000KM*")
-                        else:
-                            # Verificar alerta de troca de óleo - usar o último KM registrado
-                            current_km = get_last_km()
-                            alert_msg = check_oil_change_alert(current_km)
-                            if alert_msg:
-                                send_message(chat_id, alert_msg)
+        # Comando /manu - Registra manutenção
+        elif text.startswith("/manu"):
+            try:
+                parts = text.split()
+                if len(parts) >= 3:
+                    desc = " ".join(parts[1:-1])
+                    km_value = int(parts[-1])
+                    
+                    last_km = get_last_km()
+                    km_added = False
+                    # Adiciona KM automaticamente se for diferente do último
+                    if km_value != last_km:
+                        bot_data["km"].append({"km": km_value, "date": format_date()})
+                        km_added = True
+                    
+                    # Registrar manutenção
+                    bot_data["manu"].append({
+                        "desc": desc, 
+                        "date": format_date(),
+                        "km": km_value
+                    })
+                    
+                    save_to_gist(bot_data)
+                    
+                    # Mensagem de confirmação
+                    if km_added:
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
                     else:
-                        send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
-                except:
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
+
+                    send_message(chat_id, generate_report())
+            
+                    # Verificar se é troca de óleo
+                    oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
+                    if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
+                        send_message(chat_id, "🔧 *TROCA DE ÓLEO REGISTRADA! PRÓXIMO ALERTA EM 1000KM*")
+                    else:
+                        # Verificar alerta de troca de óleo
+                        current_km = get_last_km()
+                        alert_msg = check_oil_change_alert(current_km)
+                        if alert_msg:
+                            send_message(chat_id, alert_msg)
+                else:
                     send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
+            except:
+                send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
         
+        # Comando /report - Gera relatório resumido
         elif text.startswith("/report"):
             send_message(chat_id, generate_report())
             
-            # Mostrar também o status da troca de óleo no report
+            # Mostrar status da troca de óleo no report
             current_km = get_last_km()
             if current_km > 0:
                 alert_msg = check_oil_change_alert(current_km)
                 if alert_msg:
                     send_message(chat_id, alert_msg)
         
+        # Comando /pdf - Gera e envia PDF completo
         elif text.startswith("/pdf"):
             send_message(chat_id, "📄 Gerando relatório completo em PDF...")
             pdf_buffer = generate_pdf()
@@ -542,6 +608,7 @@ def process_command(update):
             else:
                 send_message(chat_id, "❌ Erro ao gerar PDF")
         
+        # Comando /del - Deleta registros individuais
         elif text.startswith("/del"):
             try:
                 parts = text.split()
@@ -572,8 +639,13 @@ def process_command(update):
     except Exception as e:
         print(f"❌ Erro: {e}")
 
-# ========== POLLING ==========
+# ========== SISTEMA DE POLLING ==========
+
 def polling_loop():
+    """
+    Loop principal de polling do Telegram
+    Busca atualizações continuamente e processa comandos
+    """
     print("🔄 Iniciando polling...")
     offset = 0
     
@@ -602,23 +674,36 @@ def polling_loop():
             print(f"❌ Erro: {e}")
             time.sleep(10)
 
-# ========== HTTP SERVER ==========
+# ========== SERVIDOR WEB PARA HEALTH CHECK ==========
+
 class HealthHandler(BaseHTTPRequestHandler):
+    """
+    Handler simples para health checks
+    Retorna status 200 para verificações de saúde
+    """
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
         self.wfile.write(b'Bot is running!')
+    
     def log_message(self, format, *args):
+        """Suprime logs do servidor HTTP"""
         return
 
 def start_http_server():
+    """
+    Inicia servidor HTTP simples para health checks
+    Necessário para plataformas de hospedagem como Railway
+    """
     server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
     print(f"🌐 HTTP Server rodando na porta {PORT}")
     server.serve_forever()
 
-# ========== INICIALIZAÇÃO ==========
+# ========== INICIALIZAÇÃO DO SISTEMA ==========
+
 if __name__ == "__main__":
+    # Iniciar servidor HTTP em thread separada
     http_thread = Thread(target=start_http_server, daemon=True)
     http_thread.start()
     
@@ -627,4 +712,5 @@ if __name__ == "__main__":
     notification_thread.start()
     print("🔔 Agendador de notificações iniciado")
     
+    # Iniciar loop principal de polling
     polling_loop()
