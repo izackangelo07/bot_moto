@@ -4,6 +4,7 @@ import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 import time
+from datetime import datetime
 
 print("🚀 BOT MOTOMANUTENÇÃO - HTTP MODE")
 
@@ -36,6 +37,10 @@ def send_message(chat_id, text):
         print(f"❌ Erro ao enviar mensagem: {e}")
         return None
 
+def format_date():
+    now = datetime.now()
+    return f"{now.day:02d}/{now.month:02d} {now.hour:02d}:{now.minute:02d}"
+
 def process_command(update):
     try:
         message = update.get("message", {})
@@ -49,19 +54,20 @@ def process_command(update):
         
         if text.startswith("/start"):
             send_message(chat_id, 
-                "🏍️ *BOT MOTOMANUTENÇÃO*\\n\\n"
-                "📋 Comandos:\\n"
-                "• `/addkm 15000`\\n"
-                "• `/fuel 10 5.50`\\n"
-                "• `/maint Troca de óleo`\\n"
-                "• `/report`\\n"
-                "• `/del km 1`"
+                "🏍️ *BOT MOTOMANUTENÇÃO*\n\n"
+                "📋 Comandos:\n"
+                "• `/addkm 15000`\n"
+                "• `/fuel 10 5.50`\n"
+                "• `/maint Troca de óleo`\n"
+                "• `/report`\n"
+                "• `/del km 1`\n"
+                "• `/meuid`"
             )
         
         elif text.startswith("/addkm"):
             try:
                 km_value = int(text.split()[1])
-                bot_data["km"].append({"km": km_value, "date": time.strftime("%d/%m %H:%M")})
+                bot_data["km"].append({"km": km_value, "date": format_date()})
                 send_message(chat_id, f"✅ KM registrado: {km_value} km")
             except:
                 send_message(chat_id, "❌ Use: `/addkm 15000`")
@@ -71,30 +77,70 @@ def process_command(update):
                 parts = text.split()
                 liters = float(parts[1])
                 price = float(parts[2])
-                bot_data["fuel"].append({"liters": liters, "price": price, "date": time.strftime("%d/%m %H:%M")})
+                bot_data["fuel"].append({"liters": liters, "price": price, "date": format_date()})
                 send_message(chat_id, f"⛽ Abastecimento: {liters}L a R$ {price:.2f}")
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
+        elif text.startswith("/maint"):
+            try:
+                desc = " ".join(text.split()[1:])
+                if desc:
+                    bot_data["maintenance"].append({"desc": desc, "date": format_date()})
+                    send_message(chat_id, f"🧰 Manutenção registrada: {desc}")
+                else:
+                    send_message(chat_id, "❌ Use: `/maint Troca de óleo`")
+            except:
+                send_message(chat_id, "❌ Use: `/maint Troca de óleo`")
+        
         elif text.startswith("/report"):
-            msg = "🏍️ *RELATÓRIO*\\n\\n"
+            msg = "🏍️ *RELATÓRIO*\n\n"
             
-            msg += "📏 *KM:*\\n"
-            for item in bot_data["km"][-5:]:
-                msg += f"• {item['date']} - {item['km']} km\\n"
-            if not bot_data["km"]:
-                msg += "Nenhum registro\\n"
+            # KM
+            msg += "📏 *KM:*\n"
+            if bot_data["km"]:
+                for item in bot_data["km"][-5:]:
+                    msg += f"• {item['date']} - {item['km']} km\n"
+            else:
+                msg += "Nenhum registro\n"
             
-            msg += "\\n⛽ *Abastecimentos:*\\n"
-            for item in bot_data["fuel"][-5:]:
-                msg += f"• {item['date']} - {item['liters']}L a R$ {item['price']:.2f}\\n"
-            if not bot_data["fuel"]:
-                msg += "Nenhum registro\\n"
+            # Abastecimentos
+            msg += "\n⛽ *Abastecimentos:*\n"
+            if bot_data["fuel"]:
+                for item in bot_data["fuel"][-5:]:
+                    msg += f"• {item['date']} - {item['liters']}L a R$ {item['price']:.2f}\n"
+            else:
+                msg += "Nenhum registro\n"
+            
+            # Manutenções
+            msg += "\n🧰 *Manutenções:*\n"
+            if bot_data["maintenance"]:
+                for item in bot_data["maintenance"][-5:]:
+                    msg += f"• {item['date']} - {item['desc']}\n"
+            else:
+                msg += "Nenhum registro\n"
             
             send_message(chat_id, msg)
         
         elif text.startswith("/meuid"):
             send_message(chat_id, f"🆔 Seu ID: `{chat_id}`")
+        
+        elif text.startswith("/del"):
+            try:
+                parts = text.split()
+                if len(parts) >= 3:
+                    tipo = parts[1]
+                    index = int(parts[2]) - 1
+                    
+                    if tipo in ["km", "fuel", "maint"] and 0 <= index < len(bot_data[tipo]):
+                        removido = bot_data[tipo].pop(index)
+                        send_message(chat_id, f"🗑️ Registro removido!")
+                    else:
+                        send_message(chat_id, "❌ Índice inválido")
+                else:
+                    send_message(chat_id, "❌ Use: `/del km 1`")
+            except:
+                send_message(chat_id, "❌ Use: `/del km 1`")
             
     except Exception as e:
         print(f"❌ Erro ao processar comando: {e}")
