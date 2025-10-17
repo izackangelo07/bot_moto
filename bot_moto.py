@@ -160,8 +160,6 @@ def generate_report():
     else:
         msg += "Nenhum registro\n"
     
-    return msg
-    
     # Abastecimentos
     msg += "\n⛽ *Abastecimentos:*\n"
     if bot_data["fuel"]:
@@ -172,6 +170,8 @@ def generate_report():
 
     msg += f"\n     💰 *GASTO MENSAL* 📅*Período*:({nome_mes})\n          Total: R$ {total_mes:.2f}\n\n"
     msg += f"       💰 *GASTO TOTAL*\n           Total: R$ {total_geral:.2f}\n"
+
+    return msg
     
 def process_command(update):
     try:
