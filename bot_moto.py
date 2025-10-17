@@ -12,7 +12,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 import io
 
-print("🚀 BOT MOTOMANUTENÇÃO - GITHUB GIST")
+print("🚀 BOT MANUTENÇÃO - MOTO - GITHUB GIST")
 
 # ========== CONFIGURAÇÃO ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -138,7 +138,7 @@ def check_oil_change_alert(current_km):
     km_remaining = 1000 - km_since_last_oil
     
     if km_since_last_oil >= 1000:
-        return f"🚨 *ALERTA URGENTE:* Já passou {km_since_last_oil}km da última troca de óleo! Troque o óleo imediatamente!"
+        return f"🔴🚨 *ALERTA URGENTE:* JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO! TROQUE O ÓLEO IMEDIATAMENTE! 🔴🚨"
     elif km_remaining <= 100:
         return f"🔴 *ALERTA CRÍTICO:* Faltam apenas {km_remaining}km para trocar o óleo!"
     elif km_remaining <= 300:
@@ -207,7 +207,7 @@ def generate_pdf():
         story = []
         
         # Título
-        story.append(Paragraph("🏍️ RELATÓRIO DE MOTOMANUTENÇÃO", title_style))
+        story.append(Paragraph("🏍️ RELATÓRIO DE MANUTENÇÃO - MOTO", title_style))
         story.append(Spacer(1, 10))
         
         # Data de geração
@@ -332,7 +332,7 @@ def process_command(update):
         
         if text.startswith("/start"):
             send_message(chat_id,
-                "🏍️ *BOT MOTOMANUTENÇÃO*\n\n"
+                "🏍️ *BOT MANUTENÇÃO - MOTO*\n\n"
                 "📊 *REGISTROS:*\n"
                 "• /addkm KMsAtuais — Define os KMs Atuais\n"
                 "• /fuel Litros Valor — Registra abastecimento\n"
@@ -359,13 +359,14 @@ def process_command(update):
                     bot_data["km"].append({"km": km_value, "date": format_date()})
                     save_to_gist(bot_data)
                     send_message(chat_id, f"✅ KM registrado: {km_value} km")
+
+                    send_message(chat_id, generate_report())
                     
                     # Verificar alerta de troca de óleo
                     alert_msg = check_oil_change_alert(km_value)
                     if alert_msg:
                         send_message(chat_id, alert_msg)
                     
-                    send_message(chat_id, generate_report())
             except:
                 send_message(chat_id, "❌ Use: `/addkm 15000`")
         
@@ -378,6 +379,12 @@ def process_command(update):
                 save_to_gist(bot_data)
                 send_message(chat_id, f"⛽ Abastecimento: {liters}L a R$ {price:.2f}")
                 send_message(chat_id, generate_report())
+                
+                # Verificar alerta de troca de óleo
+                    alert_msg = check_oil_change_alert(km_value)
+                    if alert_msg:
+                        send_message(chat_id, alert_msg)
+                        
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
