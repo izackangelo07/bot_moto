@@ -14,6 +14,7 @@ print("🚀 BOT MOTOMANUTENÇÃO INICIANDO...")
 # ========== CONFIGURAÇÃO ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DRIVE_FILENAME = "moto_data.json"
+SHARED_DRIVE_ID = "SEU_SHARED_DRIVE_ID_AQUI"  # ⬅️ SUBSTITUA POR ISSO!
 
 print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
 
@@ -28,7 +29,7 @@ def get_drive_service():
         raise ValueError("❌ GOOGLE_CREDENTIALS não encontrada!")
     creds_dict = json.loads(creds_json)
     creds = service_account.Credentials.from_service_account_info(
-        creds_dict, scopes=["https://www.googleapis.com/auth/drive.file"]
+        creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
     )
     return build("drive", "v3", credentials=creds)
 
@@ -39,13 +40,17 @@ except Exception as e:
     print(f"❌ Erro no Google Drive: {e}")
     drive_service = None
 
-# ========== FUNÇÕES DRIVE ==========
+# ========== FUNÇÕES DRIVE ATUALIZADAS ==========
 def get_drive_file_id(filename):
     try:
         results = drive_service.files().list(
-            q=f"name='{filename}'", 
+            q=f"name='{filename}' and '{SHARED_DRIVE_ID}' in parents",
             fields="files(id, name)", 
-            spaces="drive"
+            spaces="drive",
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID,
+            includeItemsFromAllDrives=True,
+            supportsAllDrives=True
         ).execute()
         files = results.get("files", [])
         return files[0]["id"] if files else None
@@ -69,21 +74,35 @@ def download_data():
 def upload_data(data):
     try:
         file_id = get_drive_file_id(DRIVE_FILENAME)
-        file_metadata = {"name": DRIVE_FILENAME}
+        file_metadata = {
+            "name": DRIVE_FILENAME,
+            "parents": [SHARED_DRIVE_ID]  # ⬅️ IMPORTANTE!
+        }
         
         json_data = json.dumps(data, indent=2, ensure_ascii=False)
         fh = io.BytesIO(json_data.encode('utf-8'))
         media = MediaIoBaseUpload(fh, mimetype='application/json')
         
         if file_id:
-            drive_service.files().update(fileId=file_id, media_body=media).execute()
+            # Atualizar arquivo existente
+            drive_service.files().update(
+                fileId=file_id,
+                media_body=media,
+                supportsAllDrives=True  # ⬅️ IMPORTANTE!
+            ).execute()
         else:
-            drive_service.files().create(body=file_metadata, media_body=media).execute()
-        print("✅ Dados salvos no Drive")
+            # Criar novo arquivo
+            drive_service.files().create(
+                body=file_metadata,
+                media_body=media,
+                supportsAllDrives=True,  # ⬅️ IMPORTANTE!
+                fields='id'
+            ).execute()
+        print("✅ Dados salvos no Shared Drive")
     except Exception as e:
         print(f"❌ Erro ao salvar no Drive: {e}")
 
-# ========== HANDLERS ==========
+# ========== HANDLERS (MANTIDOS) ==========
 def format_date():
     now = datetime.now(ZoneInfo("America/Sao_Paulo"))
     return f"{now.day:02}/{now.month:02} {now.hour:02}:{now.minute:02}"
@@ -120,77 +139,24 @@ async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         await update.message.reply_text("❌ Use: `/fuel 10 5.50`", parse_mode="Markdown")
 
-async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        desc = " ".join(context.args)
-        data = download_data()
-        data["maintenance"].append({"date": format_date(), "desc": desc})
-        upload_data(data)
-        await update.message.reply_text(f"🧰 {desc}")
-    except:
-        await update.message.reply_text("❌ Use: `/maint Troca de óleo`", parse_mode="Markdown")
-
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = download_data()
     msg = "🏍️ *RELATÓRIO*\n\n"
     
     msg += "📏 KM:\n" + ("\n".join([f"• {d['date']} - {d['km']} km" for d in data["km"][-5:]]) or "Nenhum registro") + "\n\n"
-    msg += "⛽ Abastecimentos:\n" + ("\n".join([f"• {d['date']} - {d['liters']}L a R$ {d['price']:.2f}" for d in data["fuel"][-5:]]) or "Nenhum registro") + "\n\n"
-    msg += "🧰 Manutenções:\n" + ("\n".join([f"• {d['date']} - {d['desc']}" for d in data["maintenance"][-5:]]) or "Nenhum registro")
+    msg += "⛽ Abastecimentos:\n" + ("\n".join([f"• {d['date']} - {d['liters']}L a R$ {d['price']:.2f}" for d in data["fuel"][-5:]]) or "Nenhum registro")
     
     await update.message.reply_text(msg, parse_mode="Markdown")
-
-async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        tipo, index = context.args[0], int(context.args[1]) - 1
-        if tipo not in ["km", "fuel", "maint"]:
-            await update.message.reply_text("❌ Tipo inválido")
-            return
-            
-        data = download_data()
-        if 0 <= index < len(data[tipo]):
-            removido = data[tipo].pop(index)
-            upload_data(data)
-            await update.message.reply_text(f"🗑️ Removido: {removido}")
-        else:
-            await update.message.reply_text("❌ Índice inválido")
-    except:
-        await update.message.reply_text("❌ Use: `/del km 1`", parse_mode="Markdown")
 
 # ========== INICIALIZAÇÃO ==========
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("addkm", add_km))
 app.add_handler(CommandHandler("fuel", add_fuel))
-app.add_handler(CommandHandler("maint", add_maintenance))
 app.add_handler(CommandHandler("report", report))
-app.add_handler(CommandHandler("del", delete_record))
 
 print("🎉 Bot configurado!")
 
-# ========== POLLING COM TRATAMENTO DE ERRO ==========
+# ========== POLLING ==========
 print("🔄 Iniciando POLLING...")
-
-try:
-    # Tentar polling com configurações que evitam conflito
-    app.run_polling(
-        poll_interval=1.0,
-        timeout=10,
-        drop_pending_updates=True,
-        allowed_updates=['message', 'callback_query']
-    )
-except Exception as e:
-    print(f"❌ Erro no polling: {e}")
-    print("💤 Tentando novamente em 30 segundos...")
-    import time
-    time.sleep(30)
-    
-    # Tentar uma vez mais
-    try:
-        app.run_polling(
-            poll_interval=2.0,
-            timeout=15,
-            drop_pending_updates=True
-        )
-    except Exception as e2:
-        print(f"❌ Erro final: {e2}")
+app.run_polling()
