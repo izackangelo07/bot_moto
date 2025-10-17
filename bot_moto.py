@@ -4,7 +4,7 @@ import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 import time
-from datetime import datetime
+from datetime import datetime, time as dt_time
 import pytz
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -20,6 +20,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GIST_ID = os.getenv("GIST_ID")
 PORT = int(os.environ.get("PORT", 8080))
 DELETE_PASSWORD = os.getenv("DELETE_PASSWORD", "123456")  # Senha padrão para deletar
+NOTIFICATION_CHAT_ID = os.getenv("NOTIFICATION_CHAT_ID")  # Chat ID para notificações
 
 # Limpar URL do Gist_ID se necessário
 if GIST_ID and "github.com" in GIST_ID:
@@ -29,6 +30,7 @@ print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
 print(f"✅ GitHub Token: {GITHUB_TOKEN[:10]}..." if GITHUB_TOKEN else "❌ GitHub Token")
 print(f"✅ Gist ID: {GIST_ID}" if GIST_ID else "❌ Gist ID")
 print(f"✅ Delete Password: {DELETE_PASSWORD[:2]}..." if DELETE_PASSWORD else "❌ Delete Password")
+print(f"✅ Notification Chat ID: {NOTIFICATION_CHAT_ID}" if NOTIFICATION_CHAT_ID else "❌ Notification Chat ID")
 
 # ========== GITHUB GIST FUNCTIONS ==========
 def load_from_gist():
@@ -149,6 +151,22 @@ def check_oil_change_alert(current_km):
         return f"🔵 *LEMBRETE:* FALTAM {km_remaining}KM PARA TROCAR O ÓLEO"
     
     return None
+
+def send_daily_notification():
+    """Envia notificação diária sobre status do óleo"""
+    if not NOTIFICATION_CHAT_ID:
+        return
+    
+    try:
+        current_km = get_last_km()
+        if current_km > 0:
+            alert_msg = check_oil_change_alert(current_km)
+            if alert_msg:
+                notification = f"🔔 *NOTIFICAÇÃO DIÁRIA - MANUTENÇÃO MOTO*\n\n{alert_msg}"
+                send_message(NOTIFICATION_CHAT_ID, notification)
+                print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
+    except Exception as e:
+        print(f"❌ Erro na notificação: {e}")
 
 def total_fuel_mes():
     """Calcula o total gasto em abastecimentos no mês atual"""
@@ -328,6 +346,29 @@ def generate_report():
     msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n"
 
     return msg
+
+def notification_scheduler():
+    """Agendador de notificações diárias às 8:00"""
+    print("⏰ Iniciando agendador de notificações...")
+    last_notification_day = None
+    
+    while True:
+        try:
+            now = datetime.now(pytz.timezone('America/Sao_Paulo'))
+            current_day = now.day
+            
+            # Verificar se é 8:00 e ainda não notificou hoje
+            if now.hour == 8 and now.minute == 0 and last_notification_day != current_day:
+                print("🕗 Enviando notificação diária...")
+                send_daily_notification()
+                last_notification_day = current_day
+                time.sleep(61)  # Espera 1 minuto para evitar duplicação
+            else:
+                time.sleep(60)  # Verifica a cada 1 minuto
+                
+        except Exception as e:
+            print(f"❌ Erro no agendador: {e}")
+            time.sleep(60)
     
 def process_command(update):
     try:
@@ -355,7 +396,8 @@ def process_command(update):
                 "• /del fuel Índice — Deleta abastecimento\n"
                 "• /del manu Índice — Deleta manutenção\n\n"
                 "🔔 *ALERTAS:*\n"
-                "• Alertas automáticos para troca de óleo a cada 1000km\n\n"
+                "• Alertas automáticos para troca de óleo a cada 1000km\n"
+                "• Notificações diárias às 8:00\n\n"
                 "💡 *Dica:* Clique e segure nos comandos para usar!"
             )
         
@@ -572,4 +614,10 @@ def start_http_server():
 if __name__ == "__main__":
     http_thread = Thread(target=start_http_server, daemon=True)
     http_thread.start()
+    
+    # Iniciar agendador de notificações em thread separada
+    notification_thread = Thread(target=notification_scheduler, daemon=True)
+    notification_thread.start()
+    print("🔔 Agendador de notificações iniciado")
+    
     polling_loop()
