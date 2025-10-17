@@ -91,6 +91,12 @@ def format_date():
     now = datetime.now()
     return f"{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}"
 
+def get_last_km():
+    """Pega o último KM registrado para evitar duplicação"""
+    if bot_data["km"]:
+        return bot_data["km"][-1]["km"]
+    return 0
+
 def generate_report():
     """Gera o relatório completo"""
     msg = "🏍️ *RELATÓRIO*\n\n"
@@ -136,17 +142,25 @@ def total_fuel_mes():
             ano_completo = 2000 + ano  # Converte "25" para 2025
             
             if mes == mes_atual and ano_completo == ano_atual:
-                total += item['liters'] * item['price']
-        except:
+                total_gasto = item['liters'] * item['price']
+                total += total_gasto
+                print(f"🔍 Abastecimento {data_str}: {item['liters']}L × R${item['price']} = R${total_gasto:.2f}")
+        except Exception as e:
+            print(f"❌ Erro ao processar data: {e}")
             continue
     
+    print(f"💰 Total do mês: R$ {total:.2f}")
     return total
 
 def total_fuel_geral():
     """Calcula o total gasto em todos os abastecimentos"""
     total = 0
     for item in bot_data["fuel"]:
-        total += item['liters'] * item['price']
+        total_gasto = item['liters'] * item['price']
+        total += total_gasto
+        print(f"🔍 Abastecimento: {item['liters']}L × R${item['price']} = R${total_gasto:.2f}")
+    
+    print(f"💰 Total geral: R$ {total:.2f}")
     return total
 
 def process_command(update):
@@ -181,10 +195,15 @@ def process_command(update):
         elif text.startswith("/addkm"):
             try:
                 km_value = int(text.split()[1])
-                bot_data["km"].append({"km": km_value, "date": format_date()})
-                save_to_gist(bot_data)
-                send_message(chat_id, f"✅ KM registrado: {km_value} km")
-                send_message(chat_id, generate_report())
+                # Verifica se o KM já é o último registrado
+                last_km = get_last_km()
+                if km_value == last_km:
+                    send_message(chat_id, f"⚠️ KM {km_value} já é o último registrado")
+                else:
+                    bot_data["km"].append({"km": km_value, "date": format_date()})
+                    save_to_gist(bot_data)
+                    send_message(chat_id, f"✅ KM registrado: {km_value} km")
+                    send_message(chat_id, generate_report())
             except:
                 send_message(chat_id, "❌ Use: `/addkm 15000`")
         
@@ -207,8 +226,12 @@ def process_command(update):
                     desc = " ".join(parts[1:-1])
                     km_value = int(parts[-1])
                     
-                    # Adiciona KM aos registros
-                    bot_data["km"].append({"km": km_value, "date": format_date()})
+                    # VERIFICAÇÃO: Só adiciona KM se for diferente do último
+                    last_km = get_last_km()
+                    km_added = False
+                    if km_value != last_km:
+                        bot_data["km"].append({"km": km_value, "date": format_date()})
+                        km_added = True
                     
                     # Registra manutenção
                     bot_data["manu"].append({
@@ -218,7 +241,12 @@ def process_command(update):
                     })
                     
                     save_to_gist(bot_data)
-                    send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM também registrado automaticamente")
+                    
+                    if km_added:
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM também registrado automaticamente")
+                    else:
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
+                    
                     send_message(chat_id, generate_report())
                 else:
                     send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
@@ -231,7 +259,13 @@ def process_command(update):
         elif text.startswith("/totalfuelmes"):
             total = total_fuel_mes()
             now = datetime.now()
-            nome_mes = now.strftime("%B")  # Nome do mês em português
+            # Nome do mês em português
+            meses_pt = {
+                1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+                5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+                9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+            }
+            nome_mes = meses_pt.get(now.month, now.strftime("%B"))
             send_message(chat_id, f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total:.2f}")
         
         elif text.startswith("/fuelgeral"):
