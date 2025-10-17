@@ -145,34 +145,50 @@ def process_command(update):
     except Exception as e:
         print(f"❌ Erro ao processar comando: {e}")
 
-# ========== POLLING MANUAL ==========
+# ========== POLLING COM PROTEÇÃO CONTRA CONFLITOS ==========
 def polling_loop():
     print("🔄 Iniciando polling manual...")
     offset = 0
+    consecutive_errors = 0
     
     while True:
         try:
             url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-            params = {"offset": offset, "timeout": 30}
+            params = {"offset": offset, "timeout": 10, "limit": 1}  # Limite menor para evitar conflitos
             
-            response = requests.get(url, params=params, timeout=35)
+            response = requests.get(url, params=params, timeout=15)
             data = response.json()
             
             if data.get("ok"):
+                consecutive_errors = 0  # Reset error counter
                 updates = data.get("result", [])
                 for update in updates:
                     process_command(update)
                     offset = update["update_id"] + 1
             else:
-                print(f"❌ Erro na API: {data}")
+                error_code = data.get("error_code")
+                if error_code == 409:  # Conflict - outra instância rodando
+                    print("⚠️  Outra instância detectada. Aguardando...")
+                    time.sleep(30)  # Espera mais tempo
+                    consecutive_errors += 1
+                else:
+                    print(f"❌ Erro na API: {data}")
+                    consecutive_errors += 1
+                
+                # Se muitos erros consecutivos, espera mais tempo
+                if consecutive_errors >= 3:
+                    print("💤 Muitos erros, aguardando 60 segundos...")
+                    time.sleep(60)
+                    consecutive_errors = 0
                 
         except requests.exceptions.Timeout:
-            continue
+            continue  # Timeout é normal, continua
         except Exception as e:
             print(f"❌ Erro no polling: {e}")
-            time.sleep(5)
+            consecutive_errors += 1
+            time.sleep(10)
 
-# ========== HTTP SERVER (para Railway) ==========
+# ========== HTTP SERVER ==========
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
