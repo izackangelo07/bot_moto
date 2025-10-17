@@ -5,6 +5,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 import time
 from datetime import datetime
+import pytz
 
 print("🚀 BOT MOTOMANUTENÇÃO - GITHUB GIST")
 
@@ -88,7 +89,9 @@ def send_message(chat_id, text):
         pass
 
 def format_date():
-    now = datetime.now()
+    """Data e hora no fuso de São Paulo"""
+    tz_sp = pytz.timezone('America/Sao_Paulo')
+    now = datetime.now(tz_sp)
     return f"{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}"
 
 def get_last_km():
@@ -128,7 +131,7 @@ def generate_report():
     return msg
 
 def total_fuel_mes():
-    """Calcula o total gasto em abastecimentos no mês atual"""
+    """Calcula o total gasto em abastecimentos no mês atual - SOMA APENAS OS VALORES"""
     now = datetime.now()
     mes_atual = now.month
     ano_atual = now.year
@@ -142,9 +145,9 @@ def total_fuel_mes():
             ano_completo = 2000 + ano  # Converte "25" para 2025
             
             if mes == mes_atual and ano_completo == ano_atual:
-                total_gasto = item['liters'] * item['price']
-                total += total_gasto
-                print(f"🔍 Abastecimento {data_str}: {item['liters']}L × R${item['price']} = R${total_gasto:.2f}")
+                # CORREÇÃO: Soma apenas o valor (price), não multiplica por litros
+                total += item['price']
+                print(f"🔍 Abastecimento {data_str}: R${item['price']:.2f}")
         except Exception as e:
             print(f"❌ Erro ao processar data: {e}")
             continue
@@ -153,12 +156,12 @@ def total_fuel_mes():
     return total
 
 def total_fuel_geral():
-    """Calcula o total gasto em todos os abastecimentos"""
+    """Calcula o total gasto em todos os abastecimentos - SOMA APENAS OS VALORES"""
     total = 0
     for item in bot_data["fuel"]:
-        total_gasto = item['liters'] * item['price']
-        total += total_gasto
-        print(f"🔍 Abastecimento: {item['liters']}L × R${item['price']} = R${total_gasto:.2f}")
+        # CORREÇÃO: Soma apenas o valor (price), não multiplica por litros
+        total += item['price']
+        print(f"🔍 Abastecimento: R${item['price']:.2f}")
     
     print(f"💰 Total geral: R$ {total:.2f}")
     return total
