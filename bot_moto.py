@@ -19,6 +19,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GIST_ID = os.getenv("GIST_ID")
 PORT = int(os.environ.get("PORT", 8080))
+DELETE_PASSWORD = os.getenv("DELETE_PASSWORD", "123456")  # Senha padrão para deletar
 
 # Limpar URL do Gist_ID se necessário
 if GIST_ID and "github.com" in GIST_ID:
@@ -27,6 +28,7 @@ if GIST_ID and "github.com" in GIST_ID:
 print(f"✅ Bot Token: {BOT_TOKEN[:10]}...")
 print(f"✅ GitHub Token: {GITHUB_TOKEN[:10]}..." if GITHUB_TOKEN else "❌ GitHub Token")
 print(f"✅ Gist ID: {GIST_ID}" if GIST_ID else "❌ Gist ID")
+print(f"✅ Delete Password: {DELETE_PASSWORD[:2]}..." if DELETE_PASSWORD else "❌ Delete Password")
 
 # ========== GITHUB GIST FUNCTIONS ==========
 def load_from_gist():
@@ -485,6 +487,38 @@ def process_command(update):
             except Exception as e:
                 print(f"❌ Erro no /del: {e}")
                 send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del manu 1`")
+        
+        elif text.startswith("/delete"):
+            try:
+                parts = text.split()
+                if len(parts) >= 2:
+                    password = parts[1]
+                    
+                    if password == DELETE_PASSWORD:
+                        # Confirmar antes de deletar tudo
+                        total_km = len(bot_data["km"])
+                        total_fuel = len(bot_data["fuel"])
+                        total_manu = len(bot_data["manu"])
+                        
+                        bot_data["km"] = []
+                        bot_data["fuel"] = []
+                        bot_data["manu"] = []
+                        
+                        if save_to_gist(bot_data):
+                            send_message(chat_id, f"🗑️🚨 *TODOS OS DADOS FORAM DELETADOS!*\n\n"
+                                                f"• {total_km} registros de KM removidos\n"
+                                                f"• {total_fuel} abastecimentos removidos\n"
+                                                f"• {total_manu} manutenções removidas\n\n"
+                                                f"*SISTEMA REINICIADO*")
+                        else:
+                            send_message(chat_id, "❌ Erro ao salvar dados deletados no Gist")
+                    else:
+                        send_message(chat_id, "❌ Senha incorreta! Operação cancelada.")
+                else:
+                    send_message(chat_id, "❌ Use: `/delete SENHA`\n\n⚠️ *ATENÇÃO:* Este comando apaga TODOS os dados permanentemente!")
+            except Exception as e:
+                print(f"❌ Erro no /delete: {e}")
+                send_message(chat_id, "❌ Use: `/delete SENHA`")
             
     except Exception as e:
         print(f"❌ Erro: {e}")
