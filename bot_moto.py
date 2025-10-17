@@ -6,6 +6,11 @@ from threading import Thread
 import time
 from datetime import datetime
 import pytz
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+import io
 
 print("🚀 BOT MOTOMANUTENÇÃO - GITHUB GIST")
 
@@ -88,6 +93,18 @@ def send_message(chat_id, text):
     except:
         pass
 
+def send_document(chat_id, document, filename):
+    """Envia documento (PDF) para o chat"""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+    files = {'document': (filename, document, 'application/pdf')}
+    data = {'chat_id': chat_id}
+    try:
+        response = requests.post(url, files=files, data=data, timeout=30)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Erro ao enviar PDF: {e}")
+        return False
+
 def format_date():
     """Data e hora no fuso de São Paulo"""
     tz_sp = pytz.timezone('America/Sao_Paulo')
@@ -109,10 +126,9 @@ def total_fuel_mes():
     total = 0
     for item in bot_data["fuel"]:
         try:
-            # Extrair data do formato "17/10/25 às 14:30"
-            data_str = item['date'].split(' às ')[0]  # "17/10/25"
+            data_str = item['date'].split(' às ')[0]
             dia, mes, ano = map(int, data_str.split('/'))
-            ano_completo = 2000 + ano  # Converte "25" para 2025
+            ano_completo = 2000 + ano
             
             if mes == mes_atual and ano_completo == ano_atual:
                 total += item['price']
@@ -127,6 +143,105 @@ def total_fuel_geral():
     for item in bot_data["fuel"]:
         total += item['price']
     return total
+
+def generate_pdf():
+    """Gera um PDF com a mesma formatação do /report"""
+    try:
+        # Criar buffer para o PDF
+        buffer = io.BytesIO()
+        
+        # Criar documento
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30)
+        styles = getSampleStyleSheet()
+        
+        # Estilo simples igual ao report
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            leading=14,
+            spaceAfter=6
+        )
+        
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Normal'],
+            fontSize=14,
+            alignment=1,
+            spaceAfter=20,
+            textColor=colors.darkblue
+        )
+        
+        # Conteúdo do PDF
+        story = []
+        
+        # Título
+        story.append(Paragraph("🏍️ RELATÓRIO DE MOTOMANUTENÇÃO", title_style))
+        story.append(Spacer(1, 10))
+        
+        # Data de geração
+        data_geracao = datetime.now().strftime("%d/%m/%Y às %H:%M")
+        story.append(Paragraph(f"Gerado em: {data_geracao}", normal_style))
+        story.append(Spacer(1, 20))
+        
+        # Gastos
+        total_mes = total_fuel_mes()
+        total_geral = total_fuel_geral()
+        
+        now = datetime.now()
+        meses_pt = {
+            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        }
+        nome_mes = meses_pt.get(now.month, now.strftime("%B"))
+        
+        # KM
+        story.append(Paragraph("<b>📏 KM:</b>", normal_style))
+        if bot_data["km"]:
+            for i, item in enumerate(bot_data["km"][-10:], 1):
+                story.append(Paragraph(f"{i}. |{item['date']}|{item['km']} Km", normal_style))
+        else:
+            story.append(Paragraph("Nenhum registro", normal_style))
+        
+        story.append(Spacer(1, 10))
+        
+        # Manutenções
+        story.append(Paragraph("<b>🧰 Manutenções:</b>", normal_style))
+        if bot_data["manu"]:
+            for i, item in enumerate(bot_data["manu"][-10:], 1):
+                story.append(Paragraph(f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km", normal_style))
+        else:
+            story.append(Paragraph("Nenhum registro", normal_style))
+        
+        story.append(Spacer(1, 10))
+        
+        # Abastecimentos
+        story.append(Paragraph("<b>⛽ Abastecimentos:</b>", normal_style))
+        if bot_data["fuel"]:
+            for i, item in enumerate(bot_data["fuel"][-10:], 1):
+                story.append(Paragraph(f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}", normal_style))
+        else:
+            story.append(Paragraph("Nenhum registro", normal_style))
+        
+        story.append(Spacer(1, 15))
+        
+        # Gastos
+        story.append(Paragraph(f"<b>💰 GASTO MENSAL  📅 Período: ({nome_mes})</b>", normal_style))
+        story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal_style))
+        story.append(Spacer(1, 5))
+        story.append(Paragraph("<b>💰 GASTO TOTAL</b>", normal_style))
+        story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal_style))
+        
+        # Gerar PDF
+        doc.build(story)
+        buffer.seek(0)
+        
+        return buffer
+        
+    except Exception as e:
+        print(f"❌ Erro ao gerar PDF: {e}")
+        return None
 
 def generate_report():
     """Gera o relatório completo com gastos"""
@@ -192,7 +307,8 @@ def process_command(update):
                 "• /fuel Litros Valor — Registra abastecimento\n"
                 "• /manu Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
-                "• /report — Resumo geral\n\n"
+                "• /report — Resumo geral\n"
+                "• /pdf — Gera relatório em PDF\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
@@ -248,7 +364,7 @@ def process_command(update):
                     save_to_gist(bot_data)
                     
                     if km_added:
-                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM também registrado automaticamente")
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
                     else:
                         send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
                     
@@ -260,6 +376,21 @@ def process_command(update):
         
         elif text.startswith("/report"):
             send_message(chat_id, generate_report())
+        
+        elif text.startswith("/pdf"):
+            send_message(chat_id, "📄 Gerando relatório em PDF...")
+            pdf_buffer = generate_pdf()
+            if pdf_buffer:
+                # Nome do arquivo com data
+                data_arquivo = datetime.now().strftime("%Y%m%d_%H%M")
+                filename = f"relatorio_moto_{data_arquivo}.pdf"
+                
+                if send_document(chat_id, pdf_buffer, filename):
+                    send_message(chat_id, "✅ PDF enviado com sucesso!")
+                else:
+                    send_message(chat_id, "❌ Erro ao enviar PDF")
+            else:
+                send_message(chat_id, "❌ Erro ao gerar PDF")
         
         elif text.startswith("/del"):
             try:
