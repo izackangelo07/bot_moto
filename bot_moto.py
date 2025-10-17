@@ -1,138 +1,167 @@
 import os
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Para fuso horário correto
+from zoneinfo import ZoneInfo
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
+import io
 
-DATA_FILE = "moto_data.json"
+# Nome do arquivo usado no Drive
+DRIVE_FILENAME = "moto_data.json"
 
-# -----------------------------
-# Funções de leitura e escrita
-# -----------------------------
-def load_data():
-    try:
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    except:
+# ========== GOOGLE DRIVE AUTH ==========
+def get_drive_service():
+    creds_json = os.getenv("GOOGLE_CREDENTIALS")
+    creds_dict = json.loads(creds_json)
+    creds = service_account.Credentials.from_service_account_info(
+        creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
+    )
+    return build("drive", "v3", credentials=creds)
+
+drive_service = get_drive_service()
+
+# ========== FUNÇÕES DE ARQUIVO ==========
+def get_drive_file_id(filename):
+    results = (
+        drive_service.files()
+        .list(q=f"name='{filename}'", fields="files(id, name)", spaces="drive")
+        .execute()
+    )
+    files = results.get("files", [])
+    return files[0]["id"] if files else None
+
+def download_data():
+    file_id = get_drive_file_id(DRIVE_FILENAME)
+    if not file_id:
         return {"km": [], "fuel": [], "maintenance": []}
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    request = drive_service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+    fh.seek(0)
+    return json.load(fh)
 
-# -----------------------------
-# Função auxiliar de data com fuso horário
-# -----------------------------
+def upload_data(data):
+    file_id = get_drive_file_id(DRIVE_FILENAME)
+    file_metadata = {"name": DRIVE_FILENAME}
+    fh = io.BytesIO(json.dumps(data, indent=2).encode("utf-8"))
+    media = MediaIoBaseUpload(fh, mimetype="application/json", resumable=True)
+
+    if file_id:
+        drive_service.files().update(fileId=file_id, media_body=media).execute()
+    else:
+        drive_service.files().create(body=file_metadata, media_body=media).execute()
+
+# ========== FUNÇÕES DE FORMATAÇÃO ==========
 def format_date():
     now = datetime.now(ZoneInfo("America/Sao_Paulo"))
-    return f"| {now.day:02}/{now.month:02}/{str(now.year)[2:]} |"
+    return f"| {now.day:02}/{now.month:02}/{str(now.year)[2:]} às {now.hour} horas |"
 
-# -----------------------------
-# Comandos do bot
-# -----------------------------
+# ========== COMANDOS ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "🏍️ Bem-vindo ao Bot da Moto!\n\n"
-    msg += "Comandos disponíveis:\n"
-    msg += "/start - Mostra esta mensagem\n"
-    msg += "/addkm <quilometragem> - Registra o KM atual\n"
-    msg += "/fuel <litros> <preço> - Registra abastecimento\n"
-    msg += "/maint <descrição> - Registra manutenção\n"
-    msg += "/report - Mostra o relatório completo da moto\n"
-    msg += "/del <km|fuel|maint> <número> - Remove um registro errado\n"
-    await update.message.reply_text(msg)
+    msg = (
+        "🏍️ *Bem-vindo ao Controle da Moto!*\n\n"
+        "Comandos disponíveis:\n"
+        "• `/addkm <valor>` — Registrar quilometragem\n"
+        "• `/fuel <litros> <preço>` — Registrar abastecimento\n"
+        "• `/maint <descrição>` — Registrar manutenção\n"
+        "• `/report` — Ver relatório completo\n"
+        "• `/del <tipo> <índice>` — Apagar um registro (km, fuel ou maint)\n"
+    )
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 1 or not context.args[0].isdigit():
-        await update.message.reply_text("Use: /addkm <quilometragem>")
+    try:
+        km_value = int(context.args[0])
+    except:
+        await update.message.reply_text("Use: /addkm <valor>")
         return
-    
-    data = load_data()
-    km_value = int(context.args[0])
+
+    data = download_data()
     data["km"].append({"date": format_date(), "km": km_value})
-    save_data(data)
-    await update.message.reply_text(f"KM registrado: {km_value}")
+    upload_data(data)
+    await update.message.reply_text(f"✅ KM registrado: {km_value} km")
 
 async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 2:
-        await update.message.reply_text("Use: /fuel <litros> <preço>")
-        return
     try:
         liters = float(context.args[0])
         price = float(context.args[1])
-    except ValueError:
-        await update.message.reply_text("Litros e preço devem ser números.")
+    except:
+        await update.message.reply_text("Use: /fuel <litros> <preço>")
         return
 
-    data = load_data()
-    data["fuel"].append({
-        "date": format_date(),
-        "liters": liters,
-        "price": price
-    })
-    save_data(data)
-
-    await update.message.reply_text(f"Abastecimento registrado: {liters}L a R${price} cada")
+    data = download_data()
+    data["fuel"].append({"date": format_date(), "liters": liters, "price": price})
+    upload_data(data)
+    await update.message.reply_text(f"⛽ Abastecimento: {liters}L a R${price}")
 
 async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) == 0:
-        await update.message.reply_text("Use: /maint <descrição da manutenção>")
+    if not context.args:
+        await update.message.reply_text("Use: /maint <descrição>")
         return
-    data = load_data()
+
     desc = " ".join(context.args)
+    data = download_data()
     data["maintenance"].append({"date": format_date(), "desc": desc})
-    save_data(data)
-    await update.message.reply_text(f"Manutenção registrada: {desc}")
+    upload_data(data)
+    await update.message.reply_text(f"🧰 Manutenção registrada: {desc}")
 
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = load_data()
-    msg = "🏍️ Relatório da Moto:\n\n"
-    msg += "KM:\n" + "\n".join([f"{i+1}. {d['date']} {d['km']} km" for i, d in enumerate(data["km"])]) + "\n\n"
-    msg += "Abastecimento:\n" + "\n".join([f"{i+1}. {d['date']} {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])]) + "\n\n"
-    msg += "Manutenção:\n" + "\n".join([f"{i+1}. {d['date']} {d['desc']}" for i, d in enumerate(data["maintenance"])])
-    await update.message.reply_text(msg)
+    data = download_data()
+    msg = "🏍️ *Relatório da Moto:*\n\n"
+
+    msg += "📏 *KM:*\n" + (
+        "\n".join([f"{i+1}. {d['date']} — {d['km']} km" for i, d in enumerate(data["km"])])
+        if data["km"] else "Nenhum registro."
+    ) + "\n\n"
+
+    msg += "⛽ *Abastecimentos:*\n" + (
+        "\n".join([f"{i+1}. {d['date']} — {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])])
+        if data["fuel"] else "Nenhum registro."
+    ) + "\n\n"
+
+    msg += "🧰 *Manutenções:*\n" + (
+        "\n".join([f"{i+1}. {d['date']} — {d['desc']}" for i, d in enumerate(data["maintenance"])])
+        if data["maintenance"] else "Nenhum registro."
+    )
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 2:
-        await update.message.reply_text("Use: /del <km|fuel|maint> <número do registro>")
+        await update.message.reply_text("Use: /del <km|fuel|maint> <número>")
         return
 
-    tipo = context.args[0].lower()
-    try:
-        index = int(context.args[1]) - 1
-    except ValueError:
-        await update.message.reply_text("O índice deve ser um número.")
-        return
-
-    data = load_data()
-
-    # Mapeamento do comando para a chave correta
-    tipo_map = {"km": "km", "fuel": "fuel", "maint": "maintenance"}
-
-    if tipo not in tipo_map:
+    tipo, index = context.args[0], context.args[1]
+    if tipo not in ["km", "fuel", "maint"]:
         await update.message.reply_text("Tipo inválido. Use: km, fuel ou maint.")
         return
 
-    tipo_json = tipo_map[tipo]
-
-    if index < 0 or index >= len(data[tipo_json]):
-        await update.message.reply_text("Índice inválido.")
+    try:
+        index = int(index) - 1
+    except:
+        await update.message.reply_text("O índice deve ser um número.")
         return
 
-    removed = data[tipo_json].pop(index)
-    save_data(data)
-    await update.message.reply_text(f"Registro removido com sucesso:\n{removed}")
+    data = download_data()
+    if index < 0 or index >= len(data[tipo]):
+        await update.message.reply_text("Número inválido.")
+        return
 
-# -----------------------------
-# Inicialização do bot
-# -----------------------------
+    removido = data[tipo].pop(index)
+    upload_data(data)
+    await update.message.reply_text(f"🗑️ Registro removido: {removido}")
+
+# ========== MAIN ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    raise ValueError("Você precisa definir a variável de ambiente BOT_TOKEN")
-
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Registrando os comandos
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("addkm", add_km))
 app.add_handler(CommandHandler("fuel", add_fuel))
