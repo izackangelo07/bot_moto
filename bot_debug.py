@@ -6,7 +6,8 @@ import requests
 
 # ================= VARIÁVEIS =================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-APP_URL = os.getenv("APP_URL")  # ex: https://botmoto-production.up.railway.app
+# REMOVER O TOKEN DA APP_URL - deve ser apenas a URL base
+APP_URL = "https://botmoto-production.up.railway.app"  # URL FIXA sem o token
 PORT = int(os.environ.get("PORT", 8080))
 
 print("=" * 50)
@@ -21,10 +22,6 @@ print(f"PORT: {PORT}")
 
 if not BOT_TOKEN:
     print("❌ ERRO: BOT_TOKEN não encontrado!")
-    exit(1)
-
-if not APP_URL:
-    print("❌ ERRO: APP_URL não encontrado!")
     exit(1)
 
 # ================= TESTE DE CONEXÃO COM TELEGRAM =================
@@ -81,7 +78,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ================= CONFIGURAÇÃO PRINCIPAL =================
-async def main():
+def main():
     print("\n🚀 Iniciando aplicação...")
     
     # Criar aplicação
@@ -92,59 +89,31 @@ async def main():
     application.add_handler(CommandHandler("meuid", meuid))
     application.add_handler(CommandHandler("status", status))
     
-    # Configurar webhook
+    # Configurar webhook - URL CORRETA
     webhook_url = f"{APP_URL.rstrip('/')}/{BOT_TOKEN}"
     print(f"🌐 Configurando webhook: {webhook_url}")
     
     try:
-        # Configurar webhook usando a approach da versão 20.x
-        await application.bot.set_webhook(
-            url=webhook_url,
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
-        
-        # Verificar webhook
-        webhook_info = await application.bot.get_webhook_info()
-        print(f"✅ Webhook configurado com sucesso!")
-        print(f"📊 Webhook URL: {webhook_info.url}")
-        print(f"📊 Pendente: {webhook_info.pending_update_count}")
-        
-        print("\n" + "=" * 50)
-        print("🎉 BOT RODANDO COM SUCESSO!")
-        print("📝 Comandos disponíveis: /start, /meuid, /status")
-        print("🌐 Usando Procfile configuration")
-        print("📦 Python-telegram-bot 20.5")
-        print("=" * 50)
-        
-        # Iniciar polling para desenvolvimento ou como fallback
-        # Mas no Railway vamos usar webhook
-        print("🔄 Iniciando servidor webhook...")
-        
-        # Usar run_webhook para versão 20.5
-        await application.run_webhook(
+        # Configurar e rodar webhook (approach síncrono para evitar problemas de event loop)
+        application.run_webhook(
             listen="0.0.0.0",
             port=PORT,
             webhook_url=webhook_url,
             key=None,
             cert=None,
-            secret_token=None
+            secret_token=None,
+            drop_pending_updates=True
         )
         
     except Exception as e:
-        print(f"❌ Erro crítico: {e}")
-        # Tentar fallback para polling em caso de erro
+        print(f"❌ Erro no webhook: {e}")
+        print("🔄 Tentando polling como fallback...")
         try:
-            print("🔄 Tentando fallback para polling...")
-            await application.run_polling()
+            application.run_polling()
         except Exception as poll_error:
             print(f"❌ Erro no polling também: {poll_error}")
 
 # ================= EXECUÇÃO =================
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n⏹️  Bot interrompido pelo usuário")
-    except Exception as e:
-        print(f"❌ Erro fatal: {e}")
+    print("🟢 Iniciando bot...")
+    main()
