@@ -358,13 +358,10 @@ def notification_scheduler():
             current_day = now.day
             
             # Verificar se é 8:00 e ainda não notificou hoje
-            if now.hour == 8 and now.minute == 0 and last_notification_day != current_day:
-                print("🕗 Enviando notificação diária...")
+            if now.hour == 18 and now.minute == 48:
+                print("🕗 Enviando notificação...")
                 send_daily_notification()
-                last_notification_day = current_day
-                time.sleep(61)  # Espera 1 minuto para evitar duplicação
-            else:
-                time.sleep(60)  # Verifica a cada 1 minuto
+                time.sleep(61)
                 
         except Exception as e:
             print(f"❌ Erro no agendador: {e}")
