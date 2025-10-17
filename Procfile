@@ -1,1 +1,1 @@
-worker: python bot_moto.py
+web: python bot_moto.py
