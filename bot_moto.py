@@ -144,9 +144,6 @@ def generate_report():
     }
     nome_mes = meses_pt.get(now.month, now.strftime("%B"))
     
-    msg += f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total_mes:.2f}\n\n"
-    msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n\n"
-    
     # KM
     msg += "📏 *KM:*\n"
     if bot_data["km"]:
@@ -162,6 +159,9 @@ def generate_report():
             msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
     else:
         msg += "Nenhum registro\n"
+
+    msg += f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total_mes:.2f}\n\n"
+    msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n\n"
     
     # Manutenções
     msg += "\n🧰 *Manutenções:*\n"
