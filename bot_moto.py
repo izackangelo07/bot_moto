@@ -91,12 +91,6 @@ def format_date():
     now = datetime.now()
     return f"|{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}|"
 
-def get_last_km():
-    """Pega o último KM registrado"""
-    if bot_data["km"]:
-        return bot_data["km"][-1]["km"]
-    return "N/A"
-
 def process_command(update):
     try:
         message = update.get("message", {})
@@ -114,7 +108,7 @@ def process_command(update):
                 "📊 *REGISTROS:*\n"
                 "• /addkm KMsAtuais — Define os KMs Atuais\n"
                 "• /fuel Litros Valor — Registra abastecimento\n"
-                "• /maint Descrição — Registra manutenção\n\n"
+                "• /maint Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
                 "• /report — Resumo geral\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
@@ -146,25 +140,28 @@ def process_command(update):
         
         elif text.startswith("/maint"):
             try:
-                desc = " ".join(text.split()[1:])
-                if desc:
-                    last_km = get_last_km()
+                parts = text.split()
+                if len(parts) >= 3:
+                    # Pega a descrição (tudo menos o último argumento)
+                    desc = " ".join(parts[1:-1])
+                    km_value = int(parts[-1])  # Último argumento é o KM
+                    
                     bot_data["maintenance"].append({
                         "desc": desc, 
                         "date": format_date(),
-                        "km": last_km
+                        "km": km_value
                     })
                     save_to_gist(bot_data)
-                    send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {last_km} Km")
+                    send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km")
                 else:
-                    send_message(chat_id, "❌ Use: `/maint Troca de óleo`")
+                    send_message(chat_id, "❌ Use: `/maint Descrição KM`\nEx: `/maint Troca de óleo 15000`")
             except:
-                send_message(chat_id, "❌ Use: `/maint Troca de óleo`")
+                send_message(chat_id, "❌ Use: `/maint Descrição KM`\nEx: `/maint Troca de óleo 15000`")
         
         elif text.startswith("/report"):
             msg = "🏍️ *RELATÓRIO*\n\n"
             
-            # KM - Formato novo com índice
+            # KM - Com "|" corrigido
             msg += "📏 *KM:*\n"
             if bot_data["km"]:
                 for i, item in enumerate(bot_data["km"][-10:], 1):
@@ -172,23 +169,19 @@ def process_command(update):
             else:
                 msg += "Nenhum registro\n"
             
-            # Abastecimentos - Formato novo com índice
+            # Abastecimentos - Sem total
             msg += "\n⛽ *Abastecimentos:*\n"
             if bot_data["fuel"]:
-                total_litros = sum(item['liters'] for item in bot_data["fuel"])
-                total_gasto = sum(item['liters'] * item['price'] for item in bot_data["fuel"])
                 for i, item in enumerate(bot_data["fuel"][-10:], 1):
                     msg += f"{i}. {item['date']}{item['liters']}L por R${item['price']:.2f}\n"
-                msg += f"\n📊 Total: {total_litros:.1f}L | R$ {total_gasto:.2f}\n"
             else:
                 msg += "Nenhum registro\n"
             
-            # Manutenções - Formato novo com índice E KM
+            # Manutenções - Com KM específico
             msg += "\n🧰 *Manutenções:*\n"
             if bot_data["maintenance"]:
                 for i, item in enumerate(bot_data["maintenance"][-10:], 1):
-                    km_info = f"|{item['km']} Km" if item.get('km') and item['km'] != "N/A" else ""
-                    msg += f"{i}. {item['date']}{item['desc']}{km_info}\n"
+                    msg += f"{i}. {item['date']}{item['desc']}|{item['km']} Km\n"
             else:
                 msg += "Nenhum registro\n"
             
