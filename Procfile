@@ -1,1 +1,1 @@
-web: python bot_moto.py
+web: python bot_test.py
