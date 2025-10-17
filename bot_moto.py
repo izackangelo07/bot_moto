@@ -358,7 +358,7 @@ def notification_scheduler():
             current_day = now.day
             
             # Verificar se é 8:00 e ainda não notificou hoje
-            if now.hour == 18 and now.minute == 48:
+            if now.hour == 18 and now.minute == 59:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 time.sleep(61)
