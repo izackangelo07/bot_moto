@@ -117,6 +117,37 @@ def get_last_km():
         return bot_data["km"][-1]["km"]
     return 0
 
+def get_last_oil_change():
+    """Encontra a última troca de óleo e retorna o KM"""
+    oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
+    
+    for manu in reversed(bot_data["manu"]):
+        desc_lower = manu['desc'].lower()
+        if any(keyword.lower() in desc_lower for keyword in oil_keywords):
+            return manu['km']
+    return 0
+
+def check_oil_change_alert(current_km):
+    """Verifica se está próximo da troca de óleo (a cada 1000km)"""
+    last_oil_km = get_last_oil_change()
+    
+    if last_oil_km == 0:
+        return "⚠️ *ALERTA:* Nenhuma troca de óleo registrada ainda!"
+    
+    km_since_last_oil = current_km - last_oil_km
+    km_remaining = 1000 - km_since_last_oil
+    
+    if km_since_last_oil >= 1000:
+        return f"🚨 *ALERTA URGENTE:* Já passou {km_since_last_oil}km da última troca de óleo! Troque o óleo imediatamente!"
+    elif km_remaining <= 100:
+        return f"🔴 *ALERTA CRÍTICO:* Faltam apenas {km_remaining}km para trocar o óleo!"
+    elif km_remaining <= 300:
+        return f"🟡 *ALERTA:* Faltam {km_remaining}km para trocar o óleo"
+    elif km_remaining <= 500:
+        return f"🔵 *LEMBRETE:* Faltam {km_remaining}km para trocar o óleo"
+    
+    return None
+
 def total_fuel_mes():
     """Calcula o total gasto em abastecimentos no mês atual"""
     now = datetime.now()
@@ -313,6 +344,8 @@ def process_command(update):
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
                 "• /del manu Índice — Deleta manutenção\n\n"
+                "🔔 *ALERTAS:*\n"
+                "• Alertas automáticos para troca de óleo a cada 1000km\n\n"
                 "💡 *Dica:* Clique e segure nos comandos para usar!"
             )
         
@@ -326,6 +359,12 @@ def process_command(update):
                     bot_data["km"].append({"km": km_value, "date": format_date()})
                     save_to_gist(bot_data)
                     send_message(chat_id, f"✅ KM registrado: {km_value} km")
+                    
+                    # Verificar alerta de troca de óleo
+                    alert_msg = check_oil_change_alert(km_value)
+                    if alert_msg:
+                        send_message(chat_id, alert_msg)
+                    
                     send_message(chat_id, generate_report())
             except:
                 send_message(chat_id, "❌ Use: `/addkm 15000`")
@@ -368,6 +407,11 @@ def process_command(update):
                     else:
                         send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
                     
+                    # Se for troca de óleo, enviar mensagem especial
+                    oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
+                    if any(keyword.lower() in desc.lower() for keyword in oil_keywords):
+                        send_message(chat_id, "🔧 *Troca de óleo registrada! Próximo alerta em 1000km*")
+                    
                     send_message(chat_id, generate_report())
                 else:
                     send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
@@ -376,6 +420,13 @@ def process_command(update):
         
         elif text.startswith("/report"):
             send_message(chat_id, generate_report())
+            
+            # Mostrar também o status da troca de óleo no report
+            current_km = get_last_km()
+            if current_km > 0:
+                alert_msg = check_oil_change_alert(current_km)
+                if alert_msg:
+                    send_message(chat_id, alert_msg)
         
         elif text.startswith("/pdf"):
             send_message(chat_id, "📄 Gerando relatório completo em PDF...")
