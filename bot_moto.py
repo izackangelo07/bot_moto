@@ -395,7 +395,7 @@ def generate_report():
 def notification_scheduler():
     """
     Agendador de notificações diárias
-    Verifica horários específicos (8:00 e 19:33) e envia notificações
+    Verifica horários específicos (8:00 e 22:30) e envia notificações
     Controla para enviar apenas uma notificação por horário por dia
     """
     print("⏰ Iniciando agendador de notificações...")
@@ -407,7 +407,7 @@ def notification_scheduler():
             current_hour = now.hour
             current_minute = now.minute
             
-            # Verificar horários configurados (8:00 e 19:33)
+            # Verificar horários configurados (8:00 e 19:42)
             if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 33)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
