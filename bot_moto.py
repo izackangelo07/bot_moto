@@ -9,6 +9,16 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 import io
 
+import os
+
+creds_json = os.getenv("GOOGLE_CREDENTIALS")
+
+if creds_json is None:
+    print("❌ ERRO: GOOGLE_CREDENTIALS não encontrada!")
+else:
+    print("✅ GOOGLE_CREDENTIALS encontrada! Tamanho:", len(creds_json))
+
+
 # Nome do arquivo usado no Drive
 DRIVE_FILENAME = "moto_data.json"
 
