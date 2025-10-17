@@ -168,8 +168,8 @@ def generate_report():
     else:
         msg += "Nenhum registro\n"
 
-    msg += f"\n     💰 *GASTO MENSAL* 📅*Período*:({nome_mes})\n          Total: R$ {total_mes:.2f}\n\n"
-    msg += f"       💰 *GASTO TOTAL*\n           Total: R$ {total_geral:.2f}\n"
+    msg += f"\n💰 *GASTO MENSAL*  📅*Período*:({nome_mes})\nTotal: R$ {total_mes:.2f}\n\n"
+    msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n"
 
     return msg
     
