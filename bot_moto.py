@@ -3,11 +3,12 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 import io
+import requests
 
 # Nome do arquivo usado no Drive
 DRIVE_FILENAME = "moto_data.json"
@@ -67,6 +68,7 @@ def format_date():
 
 # ========== COMANDOS ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("✅ /start recebido")
     msg = (
         "🏍️ *Bem-vindo ao Controle da Moto!*\n\n"
         "Comandos disponíveis:\n"
@@ -79,35 +81,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def add_km(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("✅ /addkm recebido")
     try:
         km_value = int(context.args[0])
     except:
         await update.message.reply_text("Use: /addkm <valor>")
         return
-
     data = download_data()
     data["km"].append({"date": format_date(), "km": km_value})
     upload_data(data)
     await update.message.reply_text(f"✅ KM registrado: {km_value} km")
 
 async def add_fuel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("✅ /fuel recebido")
     try:
         liters = float(context.args[0])
         price = float(context.args[1])
     except:
         await update.message.reply_text("Use: /fuel <litros> <preço>")
         return
-
     data = download_data()
     data["fuel"].append({"date": format_date(), "liters": liters, "price": price})
     upload_data(data)
     await update.message.reply_text(f"⛽ Abastecimento: {liters}L a R${price}")
 
 async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("✅ /maint recebido")
     if not context.args:
         await update.message.reply_text("Use: /maint <descrição>")
         return
-
     desc = " ".join(context.args)
     data = download_data()
     data["maintenance"].append({"date": format_date(), "desc": desc})
@@ -115,47 +117,41 @@ async def add_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🧰 Manutenção registrada: {desc}")
 
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("✅ /report recebido")
     data = download_data()
     msg = "🏍️ *Relatório da Moto:*\n\n"
-
     msg += "📏 *KM:*\n" + (
         "\n".join([f"{i+1}. {d['date']} — {d['km']} km" for i, d in enumerate(data["km"])])
         if data["km"] else "Nenhum registro."
     ) + "\n\n"
-
     msg += "⛽ *Abastecimentos:*\n" + (
         "\n".join([f"{i+1}. {d['date']} — {d['liters']}L a R${d['price']}" for i, d in enumerate(data["fuel"])])
         if data["fuel"] else "Nenhum registro."
     ) + "\n\n"
-
     msg += "🧰 *Manutenções:*\n" + (
         "\n".join([f"{i+1}. {d['date']} — {d['desc']}" for i, d in enumerate(data["maintenance"])])
         if data["maintenance"] else "Nenhum registro."
     )
-
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("✅ /del recebido")
     if len(context.args) != 2:
         await update.message.reply_text("Use: /del <km|fuel|maint> <número>")
         return
-
     tipo, index = context.args[0], context.args[1]
     if tipo not in ["km", "fuel", "maint"]:
         await update.message.reply_text("Tipo inválido. Use: km, fuel ou maint.")
         return
-
     try:
         index = int(index) - 1
     except:
         await update.message.reply_text("O índice deve ser um número.")
         return
-
     data = download_data()
     if index < 0 or index >= len(data[tipo]):
         await update.message.reply_text("Número inválido.")
         return
-
     removido = data[tipo].pop(index)
     upload_data(data)
     await update.message.reply_text(f"🗑️ Registro removido: {removido}")
@@ -164,10 +160,13 @@ async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 APP_URL = os.getenv("APP_URL")  # URL pública do Railway
 
-# DEBUG prints
 print("✅ Iniciando Bot...")
 print("APP_URL:", APP_URL)
-print("BOT_TOKEN:", BOT_TOKEN[:5] + "...")  # não mostra todo token
+print("BOT_TOKEN:", BOT_TOKEN[:5] + "...")
+
+# Limpar webhook antigo antes de registrar o novo
+delete_wh = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook")
+print("❌ Webhook antigo removido:", delete_wh.text)
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -185,3 +184,5 @@ app.run_webhook(
     url_path=BOT_TOKEN,
     webhook_url=f"{APP_URL}/{BOT_TOKEN}"
 )
+
+print(f"✅ Webhook registrado em: {APP_URL}/{BOT_TOKEN}")
