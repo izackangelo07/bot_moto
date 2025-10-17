@@ -162,7 +162,7 @@ def send_daily_notification():
         if current_km > 0:
             alert_msg = check_oil_change_alert(current_km)
             if alert_msg:
-                notification = f"🔔 *NOTIFICAÇÃO DIÁRIA - MANUTENÇÃO MOTO*\n\n{alert_msg}"
+                notification = f"     🔔 *MANUTENÇÃO MOTO*     \n{alert_msg}"
                 send_message(NOTIFICATION_CHAT_ID, notification)
                 print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
     except Exception as e:
@@ -348,20 +348,24 @@ def generate_report():
     return msg
 
 def notification_scheduler():
-    """Agendador de notificações diárias às 8:00"""
+    """Agendador de notificações diárias às 8:00 e 22:30"""
     print("⏰ Iniciando agendador de notificações...")
-    last_notification_day = None
+    last_notification_hour = None
     
     while True:
         try:
             now = datetime.now(pytz.timezone('America/Sao_Paulo'))
-            current_day = now.day
+            current_hour = now.hour
+            current_minute = now.minute
             
-            # Verificar se é 8:00 e ainda não notificou hoje
-            if now.hour == 18 and now.minute == 59:
+            # Verificar se é 8:00 OU 22:30 e ainda não notificou nesse horário
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 10)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
-                time.sleep(61)
+                last_notification_hour = current_hour
+                time.sleep(61)  # Espera 1 minuto para evitar múltiplos envios
+            else:
+                time.sleep(30)  # Verifica a cada 30 segundos
                 
         except Exception as e:
             print(f"❌ Erro no agendador: {e}")
