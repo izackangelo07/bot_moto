@@ -9,6 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 import io
 import requests
+import asyncio
 
 # Nome do arquivo usado no Drive
 DRIVE_FILENAME = "moto_data.json"
@@ -158,18 +159,19 @@ async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ========== MAIN / WEBHOOK ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-APP_URL = os.getenv("APP_URL")  # URL pública do Railway
+APP_URL = os.getenv("APP_URL")  # https://botmoto-production.up.railway.app
 
 print("✅ Iniciando Bot...")
 print("APP_URL:", APP_URL)
 print("BOT_TOKEN:", BOT_TOKEN[:5] + "...")
 
-# Limpar webhook antigo antes de registrar o novo
+# Limpar webhook antigo
 delete_wh = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook")
 print("❌ Webhook antigo removido:", delete_wh.text)
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+# Registrando handlers
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("addkm", add_km))
 app.add_handler(CommandHandler("fuel", add_fuel))
@@ -186,3 +188,6 @@ app.run_webhook(
 )
 
 print(f"✅ Webhook registrado em: {APP_URL}/{BOT_TOKEN}")
+
+# Mantém o container ativo
+asyncio.get_event_loop().run_forever()
