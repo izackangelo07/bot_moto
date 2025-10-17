@@ -368,12 +368,13 @@ def notification_scheduler():
             time.sleep(60)
     
 def process_command(update):
-    chat_id = message.get("chat", {}).get("id")
-    print(f"💬 Chat ID: {chat_id}")  # Vai aparecer nos logs
     try:
         message = update.get("message", {})
         chat_id = message.get("chat", {}).get("id")
         text = message.get("text", "")
+
+        chat_id = message.get("chat", {}).get("id")
+        print(f"💬 Chat ID: {chat_id}")  # Vai aparecer nos logs
         
         if not chat_id or not text:
             return
