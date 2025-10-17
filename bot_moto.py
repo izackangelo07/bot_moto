@@ -172,7 +172,7 @@ def check_oil_change_alert(current_km):
     
     # Sistema de alertas progressivos
     if km_since_last_oil >= 1000:
-        return f"🚨🚨🚨 *ALERTA URGENTE:* JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO! TROQUE O ÓLEO IMEDIATAMENTE! 🚨🚨🚨"
+        return f"🚨🚨*ALERTA URGENTE:* JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO!🚨🚨\n🚨🚨TROQUE O ÓLEO IMEDIATAMENTE!🚨🚨"
     elif km_remaining <= 100:
         return f"🔴 *ALERTA CRÍTICO:* FALTAM APENAS {km_remaining}KM PARA TROCAR O ÓLEO!🔴"
     elif km_remaining <= 300:
@@ -195,7 +195,7 @@ def send_daily_notification():
         if current_km > 0:
             alert_msg = check_oil_change_alert(current_km)
             if alert_msg:
-                notification = f" ``` 🔔 *MANUTENÇÃO MOTO* 🔔 ``` \n{alert_msg}"
+                notification = f" ``` 🔔 MANUTENÇÃO POPzinha 🔔 ``` \n{alert_msg}"
                 send_message(NOTIFICATION_CHAT_ID, notification)
                 print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
     except Exception as e:
@@ -269,7 +269,7 @@ def generate_pdf():
         story = []
         
         # Título
-        story.append(Paragraph("🏍️ RELATÓRIO DE MANUTENÇÃO - MOTO", title_style))
+        story.append(Paragraph("✅ RELATÓRIO DE MANUTENÇÃO - POPzinha", title_style))
         story.append(Spacer(1, 10))
         
         # Data de geração
@@ -290,7 +290,7 @@ def generate_pdf():
         nome_mes = meses_pt.get(now.month, now.strftime("%B"))
         
         # Seção de KM (todos os registros)
-        story.append(Paragraph("<b>📏 KM:</b>", normal_style))
+        story.append(Paragraph("<b>✅ KM:</b>", normal_style))
         if bot_data["km"]:
             for i, item in enumerate(bot_data["km"], 1):
                 story.append(Paragraph(f"{i}. {item['km']} Km |{item['date']}|", normal_style))
@@ -300,17 +300,17 @@ def generate_pdf():
         story.append(Spacer(1, 10))
         
         # Seção de Manutenções (todos os registros)
-        story.append(Paragraph("<b>🧰 Manutenções:</b>", normal_style))
+        story.append(Paragraph("<b>✅ Manutenções:</b>", normal_style))
         if bot_data["manu"]:
             for i, item in enumerate(bot_data["manu"], 1):
-                story.append(Paragraph(f"{i}. {item['desc']}|{item['km']} Km |{item['date']}|", normal_style))
+                story.append(Paragraph(f"{i}. {item['desc']} | {item['km']} Km |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
         story.append(Spacer(1, 10))
         
         # Seção de Abastecimentos (todos os registros)
-        story.append(Paragraph("<b>⛽ Abastecimentos:</b>", normal_style))
+        story.append(Paragraph("<b>✅ Abastecimentos:</b>", normal_style))
         if bot_data["fuel"]:
             for i, item in enumerate(bot_data["fuel"], 1):
                 story.append(Paragraph(f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|", normal_style))
@@ -320,10 +320,10 @@ def generate_pdf():
         story.append(Spacer(1, 15))
         
         # Seção de Gastos
-        story.append(Paragraph(f"<b>💰 GASTO MENSAL  📅 Período: ({nome_mes})</b>", normal_style))
+        story.append(Paragraph(f"<b>✅ GASTO MENSAL  ✅ Período: ({nome_mes})</b>", normal_style))
         story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal_style))
         story.append(Spacer(1, 5))
-        story.append(Paragraph("<b>💰 GASTO TOTAL</b>", normal_style))
+        story.append(Paragraph("<b>✅ GASTO TOTAL</b>", normal_style))
         story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal_style))
         
         # Gerar PDF
@@ -382,7 +382,7 @@ def generate_report():
         last_fuel = bot_data["fuel"][-5:]
         start_index = len(bot_data["fuel"]) - len(last_fuel) + 1
         for i, item in enumerate(last_fuel, start_index):
-            msg += f"{i}. |{item['liters']}L por R${item['price']:.2f} |{item['date']}|\n"
+            msg += f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
 
@@ -408,7 +408,7 @@ def notification_scheduler():
             current_minute = now.minute
             
             # Verificar horários configurados (8:00 e 22:30)
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 19 and current_minute == 52)) and last_notification_hour != current_hour:
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 20 and current_minute == 11)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
@@ -440,7 +440,7 @@ def process_command(update):
         # Comando /start - Menu principal
         if text.startswith("/start"):
             send_message(chat_id,
-                "🏍️ *BOT MANUTENÇÃO - MOTO*\n\n"
+                "🏍️ *BOT MANUTENÇÃO - POPzinha*\n\n"
                 "📊 *REGISTROS:*\n"
                 "• /addkm KMsAtuais — Define os KMs Atuais\n"
                 "• /fuel Litros Valor — Registra abastecimento\n"
