@@ -172,7 +172,7 @@ def check_oil_change_alert(current_km):
     
     # Sistema de alertas progressivos
     if km_since_last_oil >= 1000:
-        return f"🚨🚨*ALERTA URGENTE:* JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO!🚨🚨\n🚨🚨TROQUE O ÓLEO IMEDIATAMENTE!🚨🚨"
+        return f"*ALERTA URGENTE: JÁ PASSOU {km_since_last_oil}KM DA ÚLTIMA TROCA DE ÓLEO*!\n🚨TROQUE O ÓLEO IMEDIATAMENTE!🚨"
     elif km_remaining <= 100:
         return f"🔴 *ALERTA CRÍTICO:* FALTAM APENAS {km_remaining}KM PARA TROCAR O ÓLEO!🔴"
     elif km_remaining <= 300:
@@ -195,7 +195,7 @@ def send_daily_notification():
         if current_km > 0:
             alert_msg = check_oil_change_alert(current_km)
             if alert_msg:
-                notification = f" ``` 🔔 MANUTENÇÃO POPzinha 🔔 ``` \n{alert_msg}"
+                notification = f" ``` 🔔 MANUTENÇÃO POPzinha 🔔 ```{alert_msg}"
                 send_message(NOTIFICATION_CHAT_ID, notification)
                 print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
     except Exception as e:
@@ -372,7 +372,7 @@ def generate_report():
         last_manu = bot_data["manu"][-5:]
         start_index = len(bot_data["manu"]) - len(last_manu) + 1
         for i, item in enumerate(last_manu, start_index):
-            msg += f"{i}. {item['desc']}|{item['km']} Km |{item['date']}|\n"
+            msg += f"{i}. {item['desc']} | {item['km']} Km |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
     
@@ -408,7 +408,7 @@ def notification_scheduler():
             current_minute = now.minute
             
             # Verificar horários configurados (8:00 e 22:30)
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 20 and current_minute == 11)) and last_notification_hour != current_hour:
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 20 and current_minute == 17)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
@@ -453,8 +453,7 @@ def process_command(update):
                 "• /del fuel Índice — Deleta abastecimento\n"
                 "• /del manu Índice — Deleta manutenção\n\n"
                 "🔔 *ALERTAS:*\n"
-                "• Alertas automáticos para troca de óleo a cada 1000km\n"
-                "• Notificações diárias às 8:00\n\n"
+                "• Alertas automáticos para troca de óleo\n"
                 "💡 *Dica:* Clique e segure nos comandos para usar!"
             )
         
