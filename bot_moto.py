@@ -24,7 +24,7 @@ print(f"✅ Gist ID: {GIST_ID}" if GIST_ID else "❌ Gist ID")
 
 # ========== GITHUB GIST FUNCTIONS ==========
 def load_from_gist():
-    """Carrega dados do Gist - usa apenas manu"""
+    """Carrega dados do Gist"""
     if not GITHUB_TOKEN or not GIST_ID:
         return {"km": [], "fuel": [], "manu": []}
     
@@ -42,28 +42,13 @@ def load_from_gist():
             files = gist_data.get("files", {})
             if "moto_data.json" in files:
                 content = files["moto_data.json"]["content"]
-                data = json.loads(content)
-                
-                # REMOVER COMPLETAMENTE maintenance e usar apenas manu
-                if "maintenance" in data:
-                    # Se tiver dados em maintenance, mover para manu
-                    if "manu" not in data and data["maintenance"]:
-                        data["manu"] = data["maintenance"]
-                        print("🔄 Dados movidos de 'maintenance' para 'manu'")
-                    # Remover maintenance completamente
-                    data.pop("maintenance", None)
-                
-                # Garantir que manu existe
-                if "manu" not in data:
-                    data["manu"] = []
-                    
-                return data
+                return json.loads(content)
         return {"km": [], "fuel": [], "manu": []}
     except:
         return {"km": [], "fuel": [], "manu": []}
 
 def save_to_gist(data):
-    """Salva dados no Gist - usa apenas manu"""
+    """Salva dados no Gist"""
     if not GITHUB_TOKEN or not GIST_ID:
         return False
     
@@ -74,14 +59,10 @@ def save_to_gist(data):
             "Accept": "application/vnd.github.v3+json"
         }
         
-        # Garantir que não há maintenance no dado salvo
-        data_to_save = data.copy()
-        data_to_save.pop("maintenance", None)
-        
         payload = {
             "files": {
                 "moto_data.json": {
-                    "content": json.dumps(data_to_save, indent=2, ensure_ascii=False)
+                    "content": json.dumps(data, indent=2, ensure_ascii=False)
                 }
             }
         }
@@ -108,7 +89,65 @@ def send_message(chat_id, text):
 
 def format_date():
     now = datetime.now()
-    return f"|{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}|"
+    return f"{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}"
+
+def generate_report():
+    """Gera o relatório completo"""
+    msg = "🏍️ *RELATÓRIO*\n\n"
+    
+    # KM
+    msg += "📏 *KM:*\n"
+    if bot_data["km"]:
+        for i, item in enumerate(bot_data["km"][-10:], 1):
+            msg += f"{i}. |{item['date']}|{item['km']} Km\n"
+    else:
+        msg += "Nenhum registro\n"
+    
+    # Abastecimentos
+    msg += "\n⛽ *Abastecimentos:*\n"
+    if bot_data["fuel"]:
+        for i, item in enumerate(bot_data["fuel"][-10:], 1):
+            msg += f"{i}. |{item['date']}|{item['liters']}L por R${item['price']:.2f}\n"
+    else:
+        msg += "Nenhum registro\n"
+    
+    # Manutenções
+    msg += "\n🧰 *Manutenções:*\n"
+    if bot_data["manu"]:
+        for i, item in enumerate(bot_data["manu"][-10:], 1):
+            msg += f"{i}. |{item['date']}|{item['desc']}|{item['km']} Km\n"
+    else:
+        msg += "Nenhum registro\n"
+    
+    return msg
+
+def total_fuel_mes():
+    """Calcula o total gasto em abastecimentos no mês atual"""
+    now = datetime.now()
+    mes_atual = now.month
+    ano_atual = now.year
+    
+    total = 0
+    for item in bot_data["fuel"]:
+        try:
+            # Extrair data do formato "17/10/25 às 14:30"
+            data_str = item['date'].split(' às ')[0]  # "17/10/25"
+            dia, mes, ano = map(int, data_str.split('/'))
+            ano_completo = 2000 + ano  # Converte "25" para 2025
+            
+            if mes == mes_atual and ano_completo == ano_atual:
+                total += item['liters'] * item['price']
+        except:
+            continue
+    
+    return total
+
+def total_fuel_geral():
+    """Calcula o total gasto em todos os abastecimentos"""
+    total = 0
+    for item in bot_data["fuel"]:
+        total += item['liters'] * item['price']
+    return total
 
 def process_command(update):
     try:
@@ -129,12 +168,14 @@ def process_command(update):
                 "• /fuel Litros Valor — Registra abastecimento\n"
                 "• /manu Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
-                "• /report — Resumo geral\n\n"
+                "• /report — Resumo geral\n"
+                "• /totalfuelmes — Soma mensal do abastecimento em Reais\n"
+                "• /fuelgeral — Soma de todos abastecimentos em Reais\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
                 "• /del manu Índice — Deleta manutenção\n\n"
-                "💡 *Dica:* Clique nos comandos para usar!"
+                "💡 *Dica:* Clique e segure nos comandos para usar!"
             )
         
         elif text.startswith("/addkm"):
@@ -143,6 +184,7 @@ def process_command(update):
                 bot_data["km"].append({"km": km_value, "date": format_date()})
                 save_to_gist(bot_data)
                 send_message(chat_id, f"✅ KM registrado: {km_value} km")
+                send_message(chat_id, generate_report())
             except:
                 send_message(chat_id, "❌ Use: `/addkm 15000`")
         
@@ -154,6 +196,7 @@ def process_command(update):
                 bot_data["fuel"].append({"liters": liters, "price": price, "date": format_date()})
                 save_to_gist(bot_data)
                 send_message(chat_id, f"⛽ Abastecimento: {liters}L a R$ {price:.2f}")
+                send_message(chat_id, generate_report())
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
@@ -161,50 +204,39 @@ def process_command(update):
             try:
                 parts = text.split()
                 if len(parts) >= 3:
-                    # Pega a descrição (tudo menos o último argumento)
                     desc = " ".join(parts[1:-1])
-                    km_value = int(parts[-1])  # Último argumento é o KM
+                    km_value = int(parts[-1])
                     
+                    # Adiciona KM aos registros
+                    bot_data["km"].append({"km": km_value, "date": format_date()})
+                    
+                    # Registra manutenção
                     bot_data["manu"].append({
                         "desc": desc, 
                         "date": format_date(),
                         "km": km_value
                     })
+                    
                     save_to_gist(bot_data)
-                    send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km")
+                    send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM também registrado automaticamente")
+                    send_message(chat_id, generate_report())
                 else:
                     send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
             except:
                 send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
         
         elif text.startswith("/report"):
-            msg = "🏍️ *RELATÓRIO*\n\n"
-            
-            # KM
-            msg += "📏 *KM:*\n"
-            if bot_data["km"]:
-                for i, item in enumerate(bot_data["km"][-10:], 1):
-                    msg += f"{i}. {item['date']}{item['km']} Km\n"
-            else:
-                msg += "Nenhum registro\n"
-            
-            # Abastecimentos
-            msg += "\n⛽ *Abastecimentos:*\n"
-            if bot_data["fuel"]:
-                for i, item in enumerate(bot_data["fuel"][-10:], 1):
-                    msg += f"{i}. {item['date']}{item['liters']}L por R${item['price']:.2f}\n"
-            else:
-                msg += "Nenhum registro\n"
-            
-            # Manutenções
-            msg += "\n🧰 *Manutenções:*\n"
-            if bot_data["manu"]:
-                for i, item in enumerate(bot_data["manu"][-10:], 1):
-                    msg += f"{i}. {item['date']}{item['desc']}|{item['km']} Km\n"
-            else:
-                msg += "Nenhum registro\n"
-            
-            send_message(chat_id, msg)
+            send_message(chat_id, generate_report())
+        
+        elif text.startswith("/totalfuelmes"):
+            total = total_fuel_mes()
+            now = datetime.now()
+            nome_mes = now.strftime("%B")  # Nome do mês em português
+            send_message(chat_id, f"💰 *GASTO MENSAL* ({nome_mes})\nTotal: R$ {total:.2f}")
+        
+        elif text.startswith("/fuelgeral"):
+            total = total_fuel_geral()
+            send_message(chat_id, f"💰 *GASTO TOTAL EM COMBUSTÍVEL*\nTotal: R$ {total:.2f}")
         
         elif text.startswith("/del"):
             try:
@@ -217,10 +249,10 @@ def process_command(update):
                         bot_data[tipo].pop(index)
                         save_to_gist(bot_data)
                         send_message(chat_id, f"🗑️ Registro removido!")
+                        send_message(chat_id, generate_report())
                     else:
                         send_message(chat_id, f"❌ Índice inválido para {tipo}. Use de 1 a {len(bot_data.get(tipo, []))}")
                 else:
-                    # Mensagem de erro específica
                     if len(parts) == 2:
                         tipo = parts[1]
                         if tipo in bot_data:
