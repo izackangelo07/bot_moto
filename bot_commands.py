@@ -1,5 +1,5 @@
 from database import bot_data, save_to_gist
-from utils import send_message, format_date, get_last_km, check_oil_change_alert, send_document
+from utils import send_message, format_date, get_last_km, check_oil_change_alert, send_document, get_last_oil_change
 from reports import generate_report, generate_pdf
 from config import DELETE_PASSWORD, NOTIFICATION_CHAT_ID
 import pytz
@@ -20,7 +20,7 @@ def process_command(update):
         
         print(f"📨 Comando: {text}")
         
-               # Comando /start - Menu principal
+        # Comando /start - Menu principal
         if text.startswith("/start"):
             send_message(chat_id,
                 "🏍️ *BOT MANUTENÇÃO - POPzinha*\n\n"
@@ -218,8 +218,8 @@ def process_command(update):
             except Exception as e:
                 print(f"❌ Erro no /del: {e}")
                 send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del manu 1`")
-
-                # Comando /statusoleo - Mostra status completo do óleo
+        
+        # Comando /statusoleo - Mostra status completo do óleo
         elif text.startswith("/statusoleo"):
             try:
                 current_km = get_last_km()
@@ -254,8 +254,6 @@ def process_command(update):
                 
             except Exception as e:
                 send_message(chat_id, f"❌ Erro ao verificar status do óleo: {e}")
-    
+            
     except Exception as e:
         print(f"❌ Erro: {e}")
-
-        
