@@ -183,23 +183,50 @@ def check_oil_change_alert(current_km):
     return None
 
 def send_daily_notification():
-    """
-    Envia notificação diária sobre status do óleo
-    Só envia se houver um alerta ativo e chat ID configurado
-    """
+    """Envia notificação diária sobre status do óleo"""
+    print(f"🔔 Tentando enviar notificação para chat: {NOTIFICATION_CHAT_ID}")
+    
     if not NOTIFICATION_CHAT_ID:
+        print("❌ NOTIFICATION_CHAT_ID não configurado")
         return
     
     try:
         current_km = get_last_km()
+        print(f"🔔 KM atual: {current_km}")
+        
         if current_km > 0:
             alert_msg = check_oil_change_alert(current_km)
+            print(f"🔔 Mensagem de alerta: {alert_msg}")
+            
             if alert_msg:
                 notification = f" ```       🔔 MANUTENÇÃO POPzinha 🔔```\n{alert_msg}"
                 send_message(NOTIFICATION_CHAT_ID, notification)
                 print(f"✅ Notificação enviada para chat {NOTIFICATION_CHAT_ID}")
+            else:
+                print("ℹ️ Sem alerta ativo para notificação")
+        else:
+            print("ℹ️ Sem KM registrado para notificação")
     except Exception as e:
         print(f"❌ Erro na notificação: {e}")
+
+elif text.startswith("/debug"):
+    # Informações de debug
+    info = f"""
+🔍 *DEBUG INFO*
+
+*Configurações:*
+• NOTIFICATION_CHAT_ID: {NOTIFICATION_CHAT_ID or '❌ Não configurado'}
+• KM atual: {get_last_km()}
+• Alertas ativos: {check_oil_change_alert(get_last_km()) or 'Nenhum'}
+
+*Dados:*
+• KM registros: {len(bot_data['km'])}
+• Abastecimentos: {len(bot_data['fuel'])}
+• Manutenções: {len(bot_data['manu'])}
+
+*Horário atual:* {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')}
+"""
+    send_message(chat_id, info)
 
 def total_fuel_mes():
     """
