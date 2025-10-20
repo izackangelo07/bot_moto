@@ -1,7 +1,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 from config import PORT
-from database import load_from_gist
+from database import load_from_gist, bot_data
 from notifications import notification_scheduler
 from polling import polling_loop
 
@@ -37,7 +37,14 @@ if __name__ == "__main__":
     print("🚀 Iniciando Bot de Manutenção - POPzinha")
     
     # Carregar dados iniciais
-    load_from_gist()
+    print("📂 Iniciando carregamento de dados...")
+    loaded_data = load_from_gist()
+    
+    # Verificar se os dados foram carregados
+    if loaded_data and len(loaded_data["km"]) > 0:
+        print(f"🎉 Dados carregados com sucesso! KM atual: {loaded_data['km'][-1]['km']}")
+    else:
+        print("⚠️ Nenhum dado foi carregado ou Gist está vazio")
     
     # Iniciar servidor HTTP em thread separada
     http_thread = Thread(target=start_http_server, daemon=True)
