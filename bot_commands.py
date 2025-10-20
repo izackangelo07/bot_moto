@@ -20,7 +20,7 @@ def process_command(update):
         
         print(f"📨 Comando: {text}")
         
-        # Comando /start - Menu principal
+               # Comando /start - Menu principal
         if text.startswith("/start"):
             send_message(chat_id,
                 "🏍️ *BOT MANUTENÇÃO - POPzinha*\n\n"
@@ -30,7 +30,8 @@ def process_command(update):
                 "• /manu Descrição KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
                 "• /report — Resumo geral (últimos 5 registros)\n"
-                "• /pdf — Gera relatório completo em PDF\n\n"
+                "• /pdf — Gera relatório completo em PDF\n"
+                "• /statusoleo — Status da troca de óleo\n\n"
                 "⚙️ *GERENCIAMENTO:*\n"
                 "• /del km Índice — Deleta KM\n"
                 "• /del fuel Índice — Deleta abastecimento\n"
@@ -217,6 +218,44 @@ def process_command(update):
             except Exception as e:
                 print(f"❌ Erro no /del: {e}")
                 send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del manu 1`")
-            
+
+                # Comando /statusoleo - Mostra status completo do óleo
+        elif text.startswith("/statusoleo"):
+            try:
+                current_km = get_last_km()
+                last_oil_km = get_last_oil_change()
+                
+                if last_oil_km == 0:
+                    send_message(chat_id, "⚠️ *STATUS ÓLEO:* Nenhuma troca de óleo registrada ainda!")
+                    return
+                
+                km_since_last_oil = current_km - last_oil_km
+                km_remaining = 1000 - km_since_last_oil
+                
+                status_msg = f"⚪ *STATUS ÓLEO* ⚪\n\n"
+                status_msg += f"📏 *KM Atual:* {current_km} km\n"
+                status_msg += f"🛢️ *Última Troca:* {last_oil_km} km\n"
+                status_msg += f"🛣️ *KM Rodados:* {km_since_last_oil} km\n"
+                status_msg += f"🎯 *KM Restantes:* {km_remaining} km\n\n"
+                
+                # Adicionar alerta baseado na situação
+                if km_since_last_oil >= 1000:
+                    status_msg += f"🚨 *SITUAÇÃO:* TROCA URGENTE! Já passou {km_since_last_oil}km"
+                elif km_remaining <= 100:
+                    status_msg += f"🔴 *SITUAÇÃO:* ALERTA CRÍTICO! Faltam {km_remaining}km"
+                elif km_remaining <= 300:
+                    status_msg += f"🟡 *SITUAÇÃO:* ALERTA! Faltam {km_remaining}km"
+                elif km_remaining <= 500:
+                    status_msg += f"🔵 *SITUAÇÃO:* LEMBRETE! Faltam {km_remaining}km"
+                else:
+                    status_msg += f"✅ *SITUAÇÃO:* Tudo em ordem! Próxima troca em {km_remaining}km"
+                
+                send_message(chat_id, status_msg)
+                
+            except Exception as e:
+                send_message(chat_id, f"❌ Erro ao verificar status do óleo: {e}")
+    
     except Exception as e:
         print(f"❌ Erro: {e}")
+
+        
