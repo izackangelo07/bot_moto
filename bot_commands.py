@@ -217,61 +217,6 @@ def process_command(update):
             except Exception as e:
                 print(f"❌ Erro no /del: {e}")
                 send_message(chat_id, "❌ Use: `/del km 1` ou `/del fuel 1` ou `/del manu 1`")
-        
-        # Comando /debug - Informações de diagnóstico
-        elif text.startswith("/debug"):
-            # Informações de debug
-            info = f"""
-🔍 *DEBUG INFO*
-
-*Configurações:*
-• NOTIFICATION_CHAT_ID: {NOTIFICATION_CHAT_ID or '❌ Não configurado'}
-• KM atual: {get_last_km()}
-• Alertas ativos: {check_oil_change_alert(get_last_km()) or 'Nenhum'}
-
-*Dados:*
-• KM registros: {len(bot_data['km'])}
-• Abastecimentos: {len(bot_data['fuel'])}
-• Manutenções: {len(bot_data['manu'])}
-
-*Horário atual:* {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')}
-"""
-            send_message(chat_id, info)
-
-            # Comando /testnotify - Testa as notificações
-        elif text.startswith("/testnotify"):
-            try:
-                current_km = get_last_km()
-                alert_msg = check_oil_change_alert(current_km)
-                
-                info = f"""
-🔔 *TESTE DE NOTIFICAÇÃO*
-
-*Configurações:*
-• NOTIFICATION_CHAT_ID: {NOTIFICATION_CHAT_ID or '❌ Não configurado'}
-• KM atual: {current_km}
-• Alerta ativo: {alert_msg or 'Nenhum'}
-
-*Status:*
-"""
-                send_message(chat_id, info)
-                
-                if NOTIFICATION_CHAT_ID:
-                    if current_km > 0:
-                        if alert_msg:
-                            send_message(chat_id, "✅ Enviando notificação...")
-                            from notifications import send_daily_notification
-                            send_daily_notification()
-                            send_message(chat_id, "✅ Notificação enviada com sucesso!")
-                        else:
-                            send_message(chat_id, "ℹ️ Nenhum alerta ativo para notificar")
-                    else:
-                        send_message(chat_id, "❌ Nenhum KM registrado")
-                else:
-                    send_message(chat_id, "❌ NOTIFICATION_CHAT_ID não configurado")
-                    
-            except Exception as e:
-                send_message(chat_id, f"❌ Erro no teste: {e}")
             
     except Exception as e:
         print(f"❌ Erro: {e}")
