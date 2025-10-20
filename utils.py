@@ -78,7 +78,7 @@ def check_oil_change_alert(current_km):
     km_since_last_oil = current_km - last_oil_km
     km_remaining = 1000 - km_since_last_oil
     
-    # Sistema de alertas progressivos
+    # Sistema de alertas progressivos - SEMPRE retorna uma mensagem
     if km_since_last_oil >= 1000:
         return f"* LASCOU - {km_since_last_oil}KM RODADOS*!\n        🚨TROQUE O ÓLEO AGORA!🚨"
     elif km_remaining <= 100:
@@ -87,8 +87,9 @@ def check_oil_change_alert(current_km):
         return f"🟡*ALERTA*🟡\n*{km_remaining}KM* PARA TROCAR DE ÓLEO"
     elif km_remaining <= 500:
         return f"🔵*LEMBRETE*🔵\n*{km_remaining}KM* PARA TROCAR DE ÓLEO"
-    
-    return None
+    else:
+        # SEMPRE retorna uma mensagem, mesmo que seja apenas informativa
+        return f"⚪*STATUS ÓLEO*⚪\n*{km_since_last_oil}KM* RODADOS | *{km_remaining}KM* RESTANTES"
 
 def total_fuel_mes():
     """
