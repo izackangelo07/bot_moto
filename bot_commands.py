@@ -166,14 +166,14 @@ def process_command(update):
         
         # Comando /report - Gera relatório resumido
         elif text.startswith("/report"):
-            send_message(chat_id, generate_report())
-            
-            # Mostrar status da troca de óleo no report
+            # Mostrar status da troca de óleo antes do report
             current_km = get_last_km()
             if current_km > 0:
                 alert_msg = check_oil_change_alert(current_km)
                 if alert_msg:
                     send_message(chat_id, alert_msg)
+            #Envia o report
+            send_message(chat_id, generate_report())
         
         # Comando /pdf - Gera e envia PDF completo
         elif text.startswith("/pdf"):
