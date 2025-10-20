@@ -209,24 +209,7 @@ def send_daily_notification():
     except Exception as e:
         print(f"❌ Erro na notificação: {e}")
 
-elif text.startswith("/debug"):
-    # Informações de debug
-    info = f"""
-🔍 *DEBUG INFO*
-
-*Configurações:*
-• NOTIFICATION_CHAT_ID: {NOTIFICATION_CHAT_ID or '❌ Não configurado'}
-• KM atual: {get_last_km()}
-• Alertas ativos: {check_oil_change_alert(get_last_km()) or 'Nenhum'}
-
-*Dados:*
-• KM registros: {len(bot_data['km'])}
-• Abastecimentos: {len(bot_data['fuel'])}
-• Manutenções: {len(bot_data['manu'])}
-
-*Horário atual:* {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')}
-"""
-    send_message(chat_id, info)
+    
 
 def total_fuel_mes():
     """
@@ -664,6 +647,26 @@ def process_command(update):
             
     except Exception as e:
         print(f"❌ Erro: {e}")
+
+
+        elif text.startswith("/debug"):
+            # Informações de debug
+            info = f"""
+        🔍 *DEBUG INFO*
+        
+        *Configurações:*
+        • NOTIFICATION_CHAT_ID: {NOTIFICATION_CHAT_ID or '❌ Não configurado'}
+        • KM atual: {get_last_km()}
+        • Alertas ativos: {check_oil_change_alert(get_last_km()) or 'Nenhum'}
+        
+        *Dados:*
+        • KM registros: {len(bot_data['km'])}
+        • Abastecimentos: {len(bot_data['fuel'])}
+        • Manutenções: {len(bot_data['manu'])}
+        
+        *Horário atual:* {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')}
+        """
+            send_message(chat_id, info)
 
 # ========== SISTEMA DE POLLING ==========
 
