@@ -48,7 +48,7 @@ def notification_scheduler():
             current_minute = now.minute
             
             # Verificar horários configurados (8:00 e 14:00)
-            if ((current_hour == 8 and current_minute == 0) or (current_hour == 14 and current_minute == 0)) and last_notification_hour != current_hour:
+            if ((current_hour == 8 and current_minute == 0) or (current_hour == 15 and current_minute == 02)) and last_notification_hour != current_hour:
                 print("🕗 Enviando notificação...")
                 send_daily_notification()
                 last_notification_hour = current_hour
