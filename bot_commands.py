@@ -121,9 +121,11 @@ def process_command(update):
         elif text.startswith("/manu"):
             try:
                 parts = text.split()
-                if len(parts) >= 3:
-                    desc = " ".join(parts[1:-1])
+                if len(parts) >= 4:  # Agora precisa de pelo menos 4 partes: /manu descrição preço km
+                    # Último é KM, penúltimo é preço, o resto é descrição
                     km_value = int(parts[-1])
+                    price = float(parts[-2])
+                    desc = " ".join(parts[1:-2])  # Tudo entre /manu e o preço
                     
                     last_km = get_last_km()
                     km_added = False
@@ -132,20 +134,21 @@ def process_command(update):
                         bot_data["km"].append({"km": km_value, "date": format_date()})
                         km_added = True
                     
-                    # Registrar manutenção
+                    # Registrar manutenção COM PREÇO
                     bot_data["manu"].append({
                         "desc": desc, 
                         "date": format_date(),
-                        "km": km_value
+                        "km": km_value,
+                        "price": price
                     })
                     
                     save_to_gist(bot_data)
                     
                     # Mensagem de confirmação
                     if km_added:
-                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\n✅ KM registrado automaticamente")
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | R$ {price:.2f} | {km_value} Km\n✅ KM registrado automaticamente")
                     else:
-                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | {km_value} Km\nℹ️ KM já estava registrado")
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | R$ {price:.2f} | {km_value} Km\nℹ️ KM já estava registrado")
 
                     send_message(chat_id, generate_report())
             
@@ -160,9 +163,9 @@ def process_command(update):
                         if alert_msg:
                             send_message(chat_id, alert_msg)
                 else:
-                    send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
+                    send_message(chat_id, "❌ Use: `/manu Descrição Preço KM`\nEx: `/manu Troca de óleo 50 15000`")
             except:
-                send_message(chat_id, "❌ Use: `/manu Descrição KM`\nEx: `/manu Troca de óleo 15000`")
+                send_message(chat_id, "❌ Use: `/manu Descrição Preço KM`\nEx: `/manu Troca de óleo 50 15000`")
         
         # Comando /report - Gera relatório resumido
         elif text.startswith("/report"):
