@@ -43,7 +43,7 @@ def generate_pdf():
         story = []
         
         # Título
-        story.append(Paragraph("✅ RELATÓRIO DE MANUTENÇÃO - POPzinha", title_style))
+        story.append(Paragraph("🏍️ RELATÓRIO - POPzinha", title_style))
         story.append(Spacer(1, 10))
         
         # Data de geração
@@ -54,6 +54,7 @@ def generate_pdf():
         # Gastos
         total_mes = total_fuel_mes()
         total_geral = total_fuel_geral()
+        total_manu = sum(item.get('price', 0.0) for item in bot_data["manu"])
         
         now = datetime.now()
         meses_pt = {
@@ -63,29 +64,41 @@ def generate_pdf():
         }
         nome_mes = meses_pt.get(now.month, now.strftime("%B"))
         
-        # Seção de KM (todos os registros)
-        story.append(Paragraph("<b>✅ KM:</b>", normal_style))
+        # Seção de KM (últimos 5)
+        story.append(Paragraph("<b>📏 KM (últimos 5):</b>", normal_style))
         if bot_data["km"]:
-            for i, item in enumerate(bot_data["km"], 1):
+            # Ordenar por KM e pegar últimos 5
+            sorted_km = sorted(bot_data["km"], key=lambda x: x["km"])
+            last_km = sorted_km[-5:]
+            start_index = len(bot_data["km"]) - len(last_km) + 1
+            for i, item in enumerate(last_km, start_index):
                 story.append(Paragraph(f"{i}. {item['km']} Km |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
         story.append(Spacer(1, 10))
         
-        # Seção de Manutenções (todos os registros) - AGORA COM PREÇO
-        story.append(Paragraph("<b>✅ Manutenções:</b>", normal_style))
+        # Seção de Manutenções (últimas 5) - COM PREÇO
+        story.append(Paragraph("<b>🧰 Manutenções (últimas 5):</b>", normal_style))
         if bot_data["manu"]:
-            for i, item in enumerate(bot_data["manu"], 1):
+            # Ordenar por KM e pegar últimas 5
+            sorted_manu = sorted(bot_data["manu"], key=lambda x: x["km"])
+            last_manu = sorted_manu[-5:]
+            start_index = len(bot_data["manu"]) - len(last_manu) + 1
+            for i, item in enumerate(last_manu, start_index):
                 price = item.get('price', 0.0)
                 story.append(Paragraph(f"{i}. {item['desc']} | R$ {price:.2f} | {item['km']} Km |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
         
-        # Seção de Abastecimentos (todos os registros)
-        story.append(Paragraph("<b>✅ Abastecimentos:</b>", normal_style))
+        story.append(Spacer(1, 10))
+        
+        # Seção de Abastecimentos (últimos 5)
+        story.append(Paragraph("<b>⛽ Abastecimentos (últimos 5):</b>", normal_style))
         if bot_data["fuel"]:
-            for i, item in enumerate(bot_data["fuel"], 1):
+            last_fuel = bot_data["fuel"][-5:]
+            start_index = len(bot_data["fuel"]) - len(last_fuel) + 1
+            for i, item in enumerate(last_fuel, start_index):
                 story.append(Paragraph(f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
@@ -93,11 +106,17 @@ def generate_pdf():
         story.append(Spacer(1, 15))
         
         # Seção de Gastos
-        story.append(Paragraph(f"<b>✅ GASTO MENSAL  ✅ Período: ({nome_mes})</b>", normal_style))
+        story.append(Paragraph(f"<b>💰 GASTO MENSAL COMBUSTIVEL</b>", normal_style))
+        story.append(Paragraph(f"<b>📅Período:</b>({nome_mes})", normal_style))
         story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal_style))
         story.append(Spacer(1, 5))
-        story.append(Paragraph("<b>✅ GASTO TOTAL</b>", normal_style))
+        
+        story.append(Paragraph("<b>💰 GASTO TOTAL COMBUSTIVEL</b>", normal_style))
         story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal_style))
+        story.append(Spacer(1, 5))
+        
+        story.append(Paragraph("<b>💰 GASTO TOTAL MANUTENCAO</b>", normal_style))
+        story.append(Paragraph(f"Total: R$ {total_manu:.2f}", normal_style))
         
         # Gerar PDF
         doc.build(story)
@@ -120,6 +139,7 @@ def generate_report():
     # Cálculo de gastos
     total_mes = total_fuel_mes()
     total_geral = total_fuel_geral()
+    total_manu = sum(item.get('price', 0.0) for item in bot_data["manu"])
     
     now = datetime.now()
     meses_pt = {
@@ -129,20 +149,24 @@ def generate_report():
     }
     nome_mes = meses_pt.get(now.month, now.strftime("%B"))
     
-    # Seção de KM (últimos 5 registros)
+    # Seção de KM (últimos 5 registros) - ORDENADO POR KM
     msg += "📏 *KM (últimos 5):*\n"
     if bot_data["km"]:
-        last_km = bot_data["km"][-5:]
+        # Ordenar por KM e pegar últimos 5
+        sorted_km = sorted(bot_data["km"], key=lambda x: x["km"])
+        last_km = sorted_km[-5:]
         start_index = len(bot_data["km"]) - len(last_km) + 1
         for i, item in enumerate(last_km, start_index):
             msg += f"{i}. {item['km']} Km |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
 
-    # Seção de Manutenções (últimas 5) - AGORA COM PREÇO
+    # Seção de Manutenções (últimas 5) - ORDENADO POR KM
     msg += "\n🧰 *Manutenções (últimas 5):*\n"
     if bot_data["manu"]:
-        last_manu = bot_data["manu"][-5:]
+        # Ordenar por KM e pegar últimas 5
+        sorted_manu = sorted(bot_data["manu"], key=lambda x: x["km"])
+        last_manu = sorted_manu[-5:]
         start_index = len(bot_data["manu"]) - len(last_manu) + 1
         for i, item in enumerate(last_manu, start_index):
             price = item.get('price', 0.0)
@@ -161,7 +185,14 @@ def generate_report():
         msg += "Nenhum registro\n"
 
     # Seção de Gastos
-    msg += f"\n💰 *GASTO MENSAL*  📅*Período*:({nome_mes})\nTotal: R$ {total_mes:.2f}\n\n"
-    msg += f"💰 *GASTO TOTAL*\nTotal: R$ {total_geral:.2f}\n"
+    msg += f"\n💰 *GASTO MENSAL COMBUSTIVEL* \n"
+    msg += f"📅*Período:*({nome_mes})\n"
+    msg += f"Total: R$ {total_mes:.2f}\n\n"
+    
+    msg += f"💰 *GASTO TOTAL COMBUSTIVEL*\n"
+    msg += f"Total: R$ {total_geral:.2f}\n\n"
+    
+    msg += f"💰 *GASTO TOTAL MANUTENCAO*\n"
+    msg += f"Total: R$ {total_manu:.2f}"
 
     return msg
