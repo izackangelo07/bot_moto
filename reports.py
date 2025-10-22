@@ -100,16 +100,16 @@ def generate_pdf():
         story.append(Spacer(1, 15))
         
         # Seção de Gastos
-        story.append(Paragraph(f"<b>💰 GASTO MENSAL COMBUSTIVEL</b>", normal_style))
+        story.append(Paragraph(f"<b>💰 GASTO MENSAL COMBUSTÍVEL</b>", normal_style))
         story.append(Paragraph(f"<b>📅Período:</b>({nome_mes})", normal_style))
         story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal_style))
         story.append(Spacer(1, 5))
         
-        story.append(Paragraph("<b>💰 GASTO TOTAL COMBUSTIVEL</b>", normal_style))
+        story.append(Paragraph("<b>💰 GASTO TOTAL COMBUSTÍVEL</b>", normal_style))
         story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal_style))
         story.append(Spacer(1, 5))
         
-        story.append(Paragraph("<b>💰 GASTO TOTAL MANUTENCAO</b>", normal_style))
+        story.append(Paragraph("<b>💰 GASTO TOTAL MANUTENÇÃO</b>", normal_style))
         story.append(Paragraph(f"Total: R$ {total_manu:.2f}", normal_style))
         
         # Gerar PDF
