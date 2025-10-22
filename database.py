@@ -2,7 +2,9 @@ import json
 import requests
 from config import GITHUB_TOKEN, GIST_ID
 
-# No carregamento inicial, garantir que manutenções antigas tenham campo de preço
+# Inicializar bot_data globalmente
+bot_data = {"km": [], "fuel": [], "manu": []}
+
 def load_from_gist():
     global bot_data
     
@@ -37,6 +39,7 @@ def load_from_gist():
                 bot_data.update(loaded_data)
                 print(f"✅ Dados carregados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos, {len(bot_data['manu'])} manutenções")
         else:
+            print(f"❌ Erro ao carregar Gist: {response.status_code}")
             bot_data = {"km": [], "fuel": [], "manu": []}
             
     except Exception as e:
@@ -94,3 +97,6 @@ def update_bot_data(new_data):
     global bot_data
     bot_data = new_data
     print(f"🔄 Dados atualizados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos, {len(bot_data['manu'])} manutenções")
+
+# Carregar dados automaticamente ao importar o módulo
+load_from_gist()
