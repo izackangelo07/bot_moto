@@ -27,7 +27,7 @@ def process_command(update):
                 "📊 *REGISTROS:*\n"
                 "• /addkm KMsAtuais — Define os KMs Atuais\n"
                 "• /fuel Litros Valor — Registra abastecimento\n"
-                "• /manu Descrição KM — Registra manutenção\n\n"
+                "• /manu Descrição Preço KM — Registra manutenção\n\n"  # ATUALIZADO
                 "📋 *CONSULTAS:*\n"
                 "• /report — Resumo geral (últimos 5 registros)\n"
                 "• /pdf — Gera relatório completo em PDF\n"
