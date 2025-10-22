@@ -2,14 +2,8 @@ import json
 import requests
 from config import GITHUB_TOKEN, GIST_ID
 
-# Variável global para os dados
-bot_data = {"km": [], "fuel": [], "manu": []}
-
+# No carregamento inicial, garantir que manutenções antigas tenham campo de preço
 def load_from_gist():
-    """
-    Carrega os dados do Gist do GitHub
-    Retorna dicionário com listas vazias se não conseguir carregar
-    """
     global bot_data
     
     print(f"📂 Tentando carregar dados do Gist: {GIST_ID}")
@@ -26,34 +20,27 @@ def load_from_gist():
             "Accept": "application/vnd.github.v3+json"
         }
         
-        print(f"🌐 Fazendo requisição para: {url}")
         response = requests.get(url, headers=headers, timeout=10)
-        print(f"📡 Status da resposta: {response.status_code}")
         
         if response.status_code == 200:
             gist_data = response.json()
             files = gist_data.get("files", {})
-            print(f"📄 Arquivos encontrados: {list(files.keys())}")
-            
             if "moto_data.json" in files:
                 content = files["moto_data.json"]["content"]
-                print(f"📊 Conteúdo do arquivo: {len(content)} caracteres")
-                
-                # Carregar os dados
                 loaded_data = json.loads(content)
-                bot_data.update(loaded_data)  # Atualiza mantendo a referência
                 
+                # Garantir que manutenções antigas tenham campo de preço
+                for manu in loaded_data.get("manu", []):
+                    if "price" not in manu:
+                        manu["price"] = 0.0  # Valor padrão para manutenções antigas
+                
+                bot_data.update(loaded_data)
                 print(f"✅ Dados carregados: {len(bot_data['km'])} KM, {len(bot_data['fuel'])} abastecimentos, {len(bot_data['manu'])} manutenções")
-                return bot_data
-            else:
-                print("❌ Arquivo moto_data.json não encontrado no Gist")
-                bot_data = {"km": [], "fuel": [], "manu": []}
         else:
-            print(f"❌ Erro na API do GitHub: {response.status_code}")
             bot_data = {"km": [], "fuel": [], "manu": []}
             
     except Exception as e:
-        print(f"❌ Erro ao carregar dados do Gist: {e}")
+        print(f"❌ Erro ao carregar dados: {e}")
         bot_data = {"km": [], "fuel": [], "manu": []}
     
     return bot_data
