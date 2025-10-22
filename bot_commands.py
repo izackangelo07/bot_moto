@@ -27,7 +27,7 @@ def process_command(update):
                 "📊 *REGISTROS:*\n"
                 "• /addkm KMsAtuais — Define os KMs Atuais\n"
                 "• /fuel Litros Valor — Registra abastecimento\n"
-                "• /manu Descrição Preço KM — Registra manutenção\n\n"  # ATUALIZADO
+                "• /manu Descrição Preço KM — Registra manutenção\n\n"
                 "📋 *CONSULTAS:*\n"
                 "• /report — Resumo geral (últimos 5 registros)\n"
                 "• /pdf — Gera relatório completo em PDF\n"
@@ -117,7 +117,7 @@ def process_command(update):
             except:
                 send_message(chat_id, "❌ Use: `/fuel 10 5.50`")
         
-        # Comando /manu - Registra manutenção
+        # Comando /manu - Registra manutenção (CÓDIGO CORRIGIDO)
         elif text.startswith("/manu"):
             try:
                 parts = text.split()
@@ -128,11 +128,18 @@ def process_command(update):
                     desc = " ".join(parts[1:-2])  # Tudo entre /manu e o preço
                     
                     last_km = get_last_km()
+                    
+                    # VERIFICAR SE KM JÁ EXISTE (CORREÇÃO APLICADA)
+                    km_exists = any(registro["km"] == km_value for registro in bot_data["km"])
                     km_added = False
-                    # Adiciona KM automaticamente se for diferente do último
-                    if km_value != last_km:
+                    
+                    # Adiciona KM apenas se for diferente do último E não existir ainda
+                    if km_value != last_km and not km_exists:
                         bot_data["km"].append({"km": km_value, "date": format_date()})
                         km_added = True
+                    elif km_value != last_km and km_exists:
+                        # KM já existe em outro registro, não adicionar novo
+                        km_added = False
                     
                     # Registrar manutenção COM PREÇO
                     bot_data["manu"].append({
@@ -147,8 +154,10 @@ def process_command(update):
                     # Mensagem de confirmação
                     if km_added:
                         send_message(chat_id, f"🧰 Manutenção registrada: {desc} | R$ {price:.2f} | {km_value} Km\n✅ KM registrado automaticamente")
+                    elif km_exists:
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | R$ {price:.2f} | {km_value} Km\nℹ️ KM já estava registrado anteriormente")
                     else:
-                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | R$ {price:.2f} | {km_value} Km\nℹ️ KM já estava registrado")
+                        send_message(chat_id, f"🧰 Manutenção registrada: {desc} | R$ {price:.2f} | {km_value} Km\nℹ️ KM já era o último registrado")
 
                     send_message(chat_id, generate_report())
             
