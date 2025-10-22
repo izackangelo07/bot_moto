@@ -73,15 +73,14 @@ def generate_pdf():
         
         story.append(Spacer(1, 10))
         
-        # Seção de Manutenções (todos os registros)
+        # Seção de Manutenções (todos os registros) - AGORA COM PREÇO
         story.append(Paragraph("<b>✅ Manutenções:</b>", normal_style))
         if bot_data["manu"]:
             for i, item in enumerate(bot_data["manu"], 1):
-                story.append(Paragraph(f"{i}. {item['desc']} | {item['km']} Km |{item['date']}|", normal_style))
+                price = item.get('price', 0.0)
+                story.append(Paragraph(f"{i}. {item['desc']} | R$ {price:.2f} | {item['km']} Km |{item['date']}|", normal_style))
         else:
             story.append(Paragraph("Nenhum registro", normal_style))
-        
-        story.append(Spacer(1, 10))
         
         # Seção de Abastecimentos (todos os registros)
         story.append(Paragraph("<b>✅ Abastecimentos:</b>", normal_style))
@@ -140,13 +139,14 @@ def generate_report():
     else:
         msg += "Nenhum registro\n"
 
-    # Seção de Manutenções (últimas 5)
+    # Seção de Manutenções (últimas 5) - AGORA COM PREÇO
     msg += "\n🧰 *Manutenções (últimas 5):*\n"
     if bot_data["manu"]:
         last_manu = bot_data["manu"][-5:]
         start_index = len(bot_data["manu"]) - len(last_manu) + 1
         for i, item in enumerate(last_manu, start_index):
-            msg += f"{i}. {item['desc']} | {item['km']} Km |{item['date']}|\n"
+            price = item.get('price', 0.0)
+            msg += f"{i}. {item['desc']} | R$ {price:.2f} | {item['km']} Km |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
     
