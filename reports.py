@@ -9,118 +9,142 @@ from utils import total_fuel_mes, total_fuel_geral
 
 def generate_pdf():
     """
-    Gera um PDF completo com TODOS os registros
-    Inclui KM, manutenções, abastecimentos e gastos
-    Retorna buffer do PDF ou None em caso de erro
+    Gera PDF no layout solicitado pelo usuário.
     """
     try:
-        # Criar buffer para o PDF
         buffer = io.BytesIO()
-        
-        # Configurar documento PDF
         doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30)
         styles = getSampleStyleSheet()
-        
-        # Estilos personalizados
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
+
+        normal = ParagraphStyle(
+            'normal',
+            parent=styles["Normal"],
             fontSize=10,
             leading=14,
             spaceAfter=6
         )
-        
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Normal'],
+
+        title = ParagraphStyle(
+            'title',
+            parent=styles["Normal"],
             fontSize=14,
+            leading=18,
             alignment=1,
             spaceAfter=20,
-            textColor=colors.darkblue
+            textColor=colors.black
         )
-        
-        # Conteúdo do PDF
+
+        header = ParagraphStyle(
+            'header',
+            parent=styles["Normal"],
+            fontSize=12,
+            leading=16,
+            spaceAfter=10,
+            textColor=colors.black
+        )
+
         story = []
-        
-        # Título
-        story.append(Paragraph("🏍️ RELATÓRIO COMPLETO - POPzinha", title_style))
-        story.append(Spacer(1, 10))
-        
-        # Data de geração
+
+        # ===============================
+        #   TÍTULO
+        # ===============================
+        story.append(Paragraph("■■ RELATÓRIO COMPLETO - POPzinha", title))
+
         data_geracao = datetime.now().strftime("%d/%m/%Y às %H:%M")
-        story.append(Paragraph(f"Gerado em: {data_geracao}", normal_style))
-        story.append(Spacer(1, 20))
-        
-        # Gastos
+        story.append(Paragraph(f"Gerado em: {data_geracao}", normal))
+        story.append(Spacer(1, 12))
+
+        # ===============================
+        #   VALORES
+        # ===============================
         total_mes = total_fuel_mes()
         total_geral = total_fuel_geral()
-        total_manu = sum(item.get('price', 0.0) for item in bot_data["manu"])
-        
-        now = datetime.now()
+        total_manu = sum(item.get("price", 0.0) for item in bot_data["manu"])
+
+        # Mês atual por extenso
         meses_pt = {
             1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
             5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
             9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
         }
-        nome_mes = meses_pt.get(now.month, now.strftime("%B"))
-        
-        # Seção de KM (TODOS os registros)
-        story.append(Paragraph("<b>📏 KM (TODOS):</b>", normal_style))
-        if bot_data["km"]:
-            # Ordenar por KM
-            sorted_km = sorted(bot_data["km"], key=lambda x: x["km"])
-            for i, item in enumerate(sorted_km, 1):
-                story.append(Paragraph(f"{i}. {item['km']} Km |{item['date']}|", normal_style))
-        else:
-            story.append(Paragraph("Nenhum registro", normal_style))
-        
-        story.append(Spacer(1, 10))
-        
-        # Seção de Manutenções (TODAS) - COM PREÇO
-        story.append(Paragraph("<b>🧰 Manutenções (TODAS):</b>", normal_style))
-        if bot_data["manu"]:
-            # Ordenar por KM
-            sorted_manu = sorted(bot_data["manu"], key=lambda x: x["km"])
-            for i, item in enumerate(sorted_manu, 1):
-                price = item.get('price', 0.0)
-                story.append(Paragraph(f"{i}. {item['desc']} | R$ {price:.2f} | {item['km']} Km |{item['date']}|", normal_style))
-        else:
-            story.append(Paragraph("Nenhum registro", normal_style))
-        
-        story.append(Spacer(1, 10))
-        
-        # Seção de Abastecimentos (TODOS)
-        story.append(Paragraph("<b>⛽ Abastecimentos (TODOS):</b>", normal_style))
+        nome_mes = meses_pt.get(datetime.now().month, "Mês Atual")
+
+        # TOT. COMBUSTÍVEL
+        story.append(Paragraph("■ GASTO TOTAL COMBUSTÍVEL", header))
+        story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal))
+        story.append(Spacer(1, 8))
+
+        # TOT. MANUTENÇÃO
+        story.append(Paragraph("■ GASTO TOTAL MANUTENÇÃO", header))
+        story.append(Paragraph(f"Total: R$ {total_manu:.2f}", normal))
+        story.append(Spacer(1, 8))
+
+        # MENSAL COMBUSTÍVEL
+        story.append(Paragraph("■ GASTO MENSAL COMBUSTÍVEL", header))
+        story.append(Paragraph(f"■Período: ({nome_mes})", normal))
+        story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal))
+        story.append(Spacer(1, 12))
+
+        # ===============================
+        #   ABASTECIMENTOS
+        # ===============================
+        story.append(Paragraph("■ Abastecimentos:", header))
+
         if bot_data["fuel"]:
             for i, item in enumerate(bot_data["fuel"], 1):
-                story.append(Paragraph(f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|", normal_style))
+                story.append(Paragraph(
+                    f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|",
+                    normal
+                ))
         else:
-            story.append(Paragraph("Nenhum registro", normal_style))
-        
-        story.append(Spacer(1, 15))
-        
-        # Seção de Gastos
-        story.append(Paragraph(f"<b>💰 GASTO MENSAL COMBUSTÍVEL</b>", normal_style))
-        story.append(Paragraph(f"<b>📅Período:</b>({nome_mes})", normal_style))
-        story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal_style))
-        story.append(Spacer(1, 5))
-        
-        story.append(Paragraph("<b>💰 GASTO TOTAL COMBUSTÍVEL</b>", normal_style))
-        story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal_style))
-        story.append(Spacer(1, 5))
-        
-        story.append(Paragraph("<b>💰 GASTO TOTAL MANUTENÇÃO</b>", normal_style))
-        story.append(Paragraph(f"Total: R$ {total_manu:.2f}", normal_style))
-        
-        # Gerar PDF
+            story.append(Paragraph("Nenhum registro", normal))
+
+        story.append(Spacer(1, 12))
+
+        # ===============================
+        #   MANUTENÇÕES
+        # ===============================
+        story.append(Paragraph("■ Manutenções:", header))
+
+        if bot_data["manu"]:
+            for i, item in enumerate(bot_data["manu"], 1):
+                price = item.get("price", 0.0)
+                story.append(Paragraph(
+                    f"{i}. {item['desc']} | R$ {price:.2f} | "
+                    f"{item['km']} Km |{item['date']}|",
+                    normal
+                ))
+        else:
+            story.append(Paragraph("Nenhum registro", normal))
+
+        story.append(Spacer(1, 12))
+
+        # ===============================
+        #   KM
+        # ===============================
+        story.append(Paragraph("■ KM:", header))
+
+        if bot_data["km"]:
+            sorted_km = sorted(bot_data["km"], key=lambda x: x["km"])
+            for i, item in enumerate(sorted_km, 1):
+                story.append(Paragraph(
+                    f"{i}. {item['km']} Km |{item['date']}|",
+                    normal
+                ))
+        else:
+            story.append(Paragraph("Nenhum registro", normal))
+
+        # ===============================
+        #   EXPORT
+        # ===============================
         doc.build(story)
         buffer.seek(0)
-        
         return buffer
-        
+
     except Exception as e:
         print(f"❌ Erro ao gerar PDF: {e}")
         return None
+
 
 def generate_report():
     """
