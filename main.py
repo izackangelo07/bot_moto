@@ -56,3 +56,6 @@ def start():
 
     print("🔄 Iniciando sistema de polling...")
     polling_loop()
+    
+if __name__ == "__main__":
+    start()
