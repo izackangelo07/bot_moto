@@ -33,31 +33,26 @@ def start_http_server():
 
 # ========== INICIALIZAÇÃO DO SISTEMA ==========
 
-if __name__ == "__main__":
+def start():
     print("🚀 Iniciando Bot de Manutenção - POPzinha")
-    
-    # Carregar dados iniciais
+
     print("📂 Iniciando carregamento de dados...")
-    load_from_gist()  # Isso já carrega os dados automaticamente
-    
-    # Obter dados usando a função
+    load_from_gist()
+
     bot_data = get_bot_data()
     
-    # Verificar se os dados foram carregados
     if bot_data and len(bot_data["km"]) > 0:
-        print(f"🎉 Dados carregados com sucesso! KM atual: {bot_data['km'][-1]['km']}")
+        print(f"🎉 Dados carregados! KM atual: {bot_data['km'][-1]['km']}")
     else:
-        print("⚠️ Nenhum dado foi carregado ou Gist está vazio")
+        print("⚠️ Nenhum dado carregado ou Gist vazio")
     
-    # Iniciar servidor HTTP em thread separada
     http_thread = Thread(target=start_http_server, daemon=True)
     http_thread.start()
     
-    # Iniciar agendador de notificações em thread separada
     notification_thread = Thread(target=notification_scheduler, daemon=True)
     notification_thread.start()
-    print("🔔 Agendador de notificações iniciado")
     
-    # Iniciar loop principal de polling
+    print("🔔 Agendador de notificações iniciado")
+
     print("🔄 Iniciando sistema de polling...")
     polling_loop()
