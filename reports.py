@@ -9,134 +9,153 @@ from utils import total_fuel_mes, total_fuel_geral
 
 def generate_pdf():
     """
-    Gera PDF no layout solicitado pelo usuário.
+    Gera PDF completo com layout personalizado:
+    - Título centralizado
+    - Gastos totais
+    - Gastos mensais por TODOS os meses do ano atual
+    - Abastecimentos
+    - Manutenções
+    - KM
     """
     try:
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, leftMargin=30, rightMargin=30)
         styles = getSampleStyleSheet()
 
-        normal = ParagraphStyle(
-            'normal',
-            parent=styles["Normal"],
+        # Estilos
+        title_style = ParagraphStyle(
+            'Title',
+            fontSize=16,
+            alignment=1,
+            textColor=colors.darkblue,
+            spaceAfter=20
+        )
+
+        section_style = ParagraphStyle(
+            'Section',
+            fontSize=12,
+            spaceAfter=10,
+            textColor=colors.black,
+            leading=14
+        )
+
+        text_style = ParagraphStyle(
+            'Text',
             fontSize=10,
             leading=14,
-            spaceAfter=6
-        )
-
-        title = ParagraphStyle(
-            'title',
-            parent=styles["Normal"],
-            fontSize=14,
-            leading=18,
-            alignment=1,
-            spaceAfter=20,
-            textColor=colors.black
-        )
-
-        header = ParagraphStyle(
-            'header',
-            parent=styles["Normal"],
-            fontSize=12,
-            leading=16,
-            spaceAfter=10,
-            textColor=colors.black
+            spaceAfter=4
         )
 
         story = []
 
-        # ===============================
-        #   TÍTULO
-        # ===============================
-        story.append(Paragraph("■■ RELATÓRIO COMPLETO - POPzinha", title))
+        # TÍTULO
+        story.append(Paragraph("■■ RELATÓRIO COMPLETO - POPzinha", title_style))
 
+        # Data
         data_geracao = datetime.now().strftime("%d/%m/%Y às %H:%M")
-        story.append(Paragraph(f"Gerado em: {data_geracao}", normal))
+        story.append(Paragraph(f"Gerado em: {data_geracao}", text_style))
         story.append(Spacer(1, 12))
 
-        # ===============================
-        #   VALORES
-        # ===============================
-        total_mes = total_fuel_mes()
+        # --------------------------
+        # GASTOS TOTAIS
+        # --------------------------
         total_geral = total_fuel_geral()
-        total_manu = sum(item.get("price", 0.0) for item in bot_data["manu"])
+        total_manu = sum(item.get('price', 0.0) for item in bot_data["manu"])
 
-        # Mês atual por extenso
+        story.append(Paragraph("■ GASTO TOTAL COMBUSTÍVEL", section_style))
+        story.append(Paragraph(f"Total: R$ {total_geral:.2f}", text_style))
+        story.append(Spacer(1, 6))
+
+        story.append(Paragraph("■ GASTO TOTAL MANUTENÇÃO", section_style))
+        story.append(Paragraph(f"Total: R$ {total_manu:.2f}", text_style))
+        story.append(Spacer(1, 10))
+
+        # --------------------------
+        # GASTO MENSAL — TODOS OS MESES
+        # --------------------------
         meses_pt = {
             1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
             5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
             9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
         }
-        nome_mes = meses_pt.get(datetime.now().month, "Mês Atual")
 
-        # TOT. COMBUSTÍVEL
-        story.append(Paragraph("■ GASTO TOTAL COMBUSTÍVEL", header))
-        story.append(Paragraph(f"Total: R$ {total_geral:.2f}", normal))
-        story.append(Spacer(1, 8))
+        ano_atual = datetime.now().year
 
-        # TOT. MANUTENÇÃO
-        story.append(Paragraph("■ GASTO TOTAL MANUTENÇÃO", header))
-        story.append(Paragraph(f"Total: R$ {total_manu:.2f}", normal))
-        story.append(Spacer(1, 8))
+        # Cálculo dos gastos mensais
+        gastos_mensais = {mes: 0.0 for mes in range(1, 13)}
 
-        # MENSAL COMBUSTÍVEL
-        story.append(Paragraph("■ GASTO MENSAL COMBUSTÍVEL", header))
-        story.append(Paragraph(f"■Período: ({nome_mes})", normal))
-        story.append(Paragraph(f"Total: R$ {total_mes:.2f}", normal))
-        story.append(Spacer(1, 12))
+        for item in bot_data["fuel"]:
+            try:
+                data_str = item['date'].split(' às ')[0]
+                dia, mes, ano = map(int, data_str.split('/'))
+                ano_completo = 2000 + ano
+                if ano_completo == ano_atual:
+                    gastos_mensais[mes] += item['price']
+            except:
+                pass
 
-        # ===============================
-        #   ABASTECIMENTOS
-        # ===============================
-        story.append(Paragraph("■ Abastecimentos:", header))
+        story.append(Paragraph("■ GASTO MENSAL COMBUSTÍVEL", section_style))
+
+        for mes in range(1, 12 + 1):
+            nome = meses_pt[mes]
+            total_mes = gastos_mensais[mes]
+            story.append(Paragraph(f"■ Período: ({nome})", text_style))
+            story.append(Paragraph(f"Total: R$ {total_mes:.2f}", text_style))
+            story.append(Spacer(1, 4))
+
+        story.append(Spacer(1, 10))
+
+        # --------------------------
+        # ABASTECIMENTOS
+        # --------------------------
+        story.append(Paragraph("■ Abastecimentos:", section_style))
 
         if bot_data["fuel"]:
             for i, item in enumerate(bot_data["fuel"], 1):
                 story.append(Paragraph(
                     f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|",
-                    normal
+                    text_style
                 ))
         else:
-            story.append(Paragraph("Nenhum registro", normal))
+            story.append(Paragraph("Nenhum registro", text_style))
 
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 10))
 
-        # ===============================
-        #   MANUTENÇÕES
-        # ===============================
-        story.append(Paragraph("■ Manutenções:", header))
+        # --------------------------
+        # MANUTENÇÕES
+        # --------------------------
+        story.append(Paragraph("■ Manutenções:", section_style))
 
         if bot_data["manu"]:
-            for i, item in enumerate(bot_data["manu"], 1):
-                price = item.get("price", 0.0)
+            sorted_manu = sorted(bot_data["manu"], key=lambda x: x["km"])
+            for i, item in enumerate(sorted_manu, 1):
                 story.append(Paragraph(
-                    f"{i}. {item['desc']} | R$ {price:.2f} | "
-                    f"{item['km']} Km |{item['date']}|",
-                    normal
+                    f"{i}. {item['desc']} | R$ {item['price']:.2f} | {item['km']} Km |{item['date']}|",
+                    text_style
                 ))
         else:
-            story.append(Paragraph("Nenhum registro", normal))
+            story.append(Paragraph("Nenhum registro", text_style))
 
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 10))
 
-        # ===============================
-        #   KM
-        # ===============================
-        story.append(Paragraph("■ KM:", header))
+        # --------------------------
+        # KM
+        # --------------------------
+        story.append(Paragraph("■ KM:", section_style))
 
         if bot_data["km"]:
             sorted_km = sorted(bot_data["km"], key=lambda x: x["km"])
             for i, item in enumerate(sorted_km, 1):
                 story.append(Paragraph(
                     f"{i}. {item['km']} Km |{item['date']}|",
-                    normal
+                    text_style
                 ))
         else:
-            story.append(Paragraph("Nenhum registro", normal))
+            story.append(Paragraph("Nenhum registro", text_style))
 
-        # ===============================
-        #   EXPORT
-        # ===============================
+        # --------------------------
+        # GERAR PDF
+        # --------------------------
         doc.build(story)
         buffer.seek(0)
         return buffer
@@ -144,7 +163,6 @@ def generate_pdf():
     except Exception as e:
         print(f"❌ Erro ao gerar PDF: {e}")
         return None
-
 
 def generate_report():
     """
