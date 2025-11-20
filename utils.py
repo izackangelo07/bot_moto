@@ -91,28 +91,35 @@ def check_oil_change_alert(current_km):
         # SEMPRE retorna uma mensagem, mesmo que seja apenas informativa
         return f"⚪*STATUS ÓLEO*⚪\n*{km_since_last_oil}KM* RODADOS | *{km_remaining}KM* RESTANTES"
 
-def total_fuel_mes():
+def total_fuel_por_mes():
     """
-    Calcula o total gasto em abastecimentos no mês atual
-    Considera apenas registros do mês e ano corrente
+    Retorna um dicionário com o total gasto em combustível
+    por cada mês do ano atual.
     """
     now = datetime.now()
-    mes_atual = now.month
     ano_atual = now.year
-    
-    total = 0
+
+    meses_nomes = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ]
+
+    # inicia todos os meses com 0
+    totais = {mes: 0 for mes in meses_nomes}
+
     for item in bot_data["fuel"]:
         try:
             data_str = item['date'].split(' às ')[0]
             dia, mes, ano = map(int, data_str.split('/'))
             ano_completo = 2000 + ano
-            
-            if mes == mes_atual and ano_completo == ano_atual:
-                total += item['price']
+
+            if ano_completo == ano_atual:
+                nome_mes = meses_nomes[mes - 1]
+                totais[nome_mes] += item['price']
         except:
             continue
-    
-    return total
+
+    return totais
 
 def total_fuel_geral():
     """
