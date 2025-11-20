@@ -125,7 +125,7 @@ def generate_pdf():
 def generate_report():
     """
     Gera relatório resumido para o Telegram
-    Mostra apenas os últimos 5 registros de cada categoria
+    Mostra apenas os últimos 4 registros de cada categoria
     Inclui gastos mensais e totais
     """
     msg = "🏍️ *RELATÓRIO*\n\n"
@@ -143,24 +143,24 @@ def generate_report():
     }
     nome_mes = meses_pt.get(now.month, now.strftime("%B"))
     
-    # Seção de KM (últimos 5 registros) - ORDENADO POR KM
-    msg += "📏 *KM (últimos 5):*\n"
+    # Seção de KM (últimos 4 registros) - ORDENADO POR KM
+    msg += "📏 *KM (últimos 4):*\n"
     if bot_data["km"]:
-        # Ordenar por KM e pegar últimos 5
+        # Ordenar por KM e pegar últimos 4
         sorted_km = sorted(bot_data["km"], key=lambda x: x["km"])
-        last_km = sorted_km[-5:]
+        last_km = sorted_km[-4:]
         start_index = len(bot_data["km"]) - len(last_km) + 1
         for i, item in enumerate(last_km, start_index):
             msg += f"{i}. {item['km']} Km |{item['date']}|\n"
     else:
         msg += "Nenhum registro\n"
 
-    # Seção de Manutenções (últimas 5) - ORDENADO POR KM
-    msg += "\n🧰 *Manutenções (últimas 5):*\n"
+    # Seção de Manutenções (últimas 4) - ORDENADO POR KM
+    msg += "\n🧰 *Manutenções (últimas 4):*\n"
     if bot_data["manu"]:
-        # Ordenar por KM e pegar últimas 5
+        # Ordenar por KM e pegar últimas 4
         sorted_manu = sorted(bot_data["manu"], key=lambda x: x["km"])
-        last_manu = sorted_manu[-5:]
+        last_manu = sorted_manu[-4:]
         start_index = len(bot_data["manu"]) - len(last_manu) + 1
         for i, item in enumerate(last_manu, start_index):
             price = item.get('price', 0.0)
@@ -168,10 +168,10 @@ def generate_report():
     else:
         msg += "Nenhum registro\n"
     
-    # Seção de Abastecimentos (últimos 5)
-    msg += "\n⛽ *Abastecimentos (últimos 5):*\n"
+    # Seção de Abastecimentos (últimos 4)
+    msg += "\n⛽ *Abastecimentos (últimos 4):*\n"
     if bot_data["fuel"]:
-        last_fuel = bot_data["fuel"][-5:]
+        last_fuel = bot_data["fuel"][-4:]
         start_index = len(bot_data["fuel"]) - len(last_fuel) + 1
         for i, item in enumerate(last_fuel, start_index):
             msg += f"{i}. {item['liters']}L por R${item['price']:.2f} |{item['date']}|\n"
