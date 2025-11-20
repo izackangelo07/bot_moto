@@ -5,7 +5,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from database import bot_data
-from utils import total_fuel_mes, total_fuel_geral
+from utils import total_fuel_por_mes, total_fuel_geral
 
 def generate_pdf():
     """
@@ -173,7 +173,7 @@ def generate_report():
     msg = "🏍️ *RELATÓRIO*\n\n"
     
     # Cálculo de gastos
-    total_mes = total_fuel_mes()
+    total_mes = total_fuel_por_mes()
     total_geral = total_fuel_geral()
     total_manu = sum(item.get('price', 0.0) for item in bot_data["manu"])
     
