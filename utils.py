@@ -4,13 +4,14 @@ from datetime import datetime
 from config import BOT_TOKEN
 from database import bot_data
 
+# ---------------------------------------------------------
+# 🔹 ENVIO DE MENSAGENS
+# ---------------------------------------------------------
 def send_message(chat_id, text):
-    """
-    Envia mensagem para um chat específico do Telegram
-    Usa parse_mode Markdown para formatação
-    """
+    """Envia mensagem simples usando Markdown."""
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+
     try:
         response = requests.post(url, json=data, timeout=5)
         return response.status_code == 200
@@ -18,14 +19,13 @@ def send_message(chat_id, text):
         print(f"❌ Erro ao enviar mensagem: {e}")
         return False
 
+
 def send_document(chat_id, document, filename):
-    """
-    Envia documento PDF para o chat do Telegram
-    Retorna True se enviou com sucesso
-    """
+    """Envia PDF para o chat."""
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
     files = {'document': (filename, document, 'application/pdf')}
     data = {'chat_id': chat_id}
+
     try:
         response = requests.post(url, files=files, data=data, timeout=30)
         return response.status_code == 200
@@ -33,54 +33,53 @@ def send_document(chat_id, document, filename):
         print(f"❌ Erro ao enviar PDF: {e}")
         return False
 
+
+# ---------------------------------------------------------
+# 🔹 FORMATAÇÃO DE DATA
+# ---------------------------------------------------------
 def format_date():
-    """
-    Retorna data e hora atual formatada no fuso de São Paulo
-    Formato: DD/MM/AA às HH:MM
-    """
+    """Retorna data/hora no fuso de São Paulo no formato DD/MM/AA às HH:MM."""
     tz_sp = pytz.timezone('America/Sao_Paulo')
     now = datetime.now(tz_sp)
     return f"{now.day:02d}/{now.month:02d}/{str(now.year)[-2:]} às {now.hour:02d}:{now.minute:02d}"
 
+
+# ---------------------------------------------------------
+# 🔹 KM E MANUTENÇÃO
+# ---------------------------------------------------------
 def get_last_km():
-    """
-    Retorna o último KM registrado
-    Retorna 0 se não houver registros
-    """
+    """Retorna último KM registrado ou 0."""
     if bot_data["km"]:
         return bot_data["km"][-1]["km"]
     return 0
 
+
 def get_last_oil_change():
-    """
-    Encontra a última troca de óleo registrada
-    Procura por palavras-chave nas descrições de manutenção
-    Retorna o KM da última troca ou 0 se não encontrou
-    """
+    """Encontra o último KM onde houve troca de óleo."""
     oil_keywords = ['óleo', 'oleo', 'OLEO', 'ÓLEO', 'Óleo']
-    
+
     for manu in reversed(bot_data["manu"]):
         desc_lower = manu['desc'].lower()
         if any(keyword.lower() in desc_lower for keyword in oil_keywords):
             return manu['km']
     return 0
 
+
 def check_oil_change_alert(current_km):
-    """
-    Verifica se está próximo da troca de óleo (a cada 1000km)
-    Retorna mensagem de alerta apropriada ou None se não há alerta
-    """
+    """Retorna mensagem de alerta sobre troca de óleo."""
     last_oil_km = get_last_oil_change()
-    
+
     if last_oil_km == 0:
         return "⚠️ *ALERTA:* NENHUMA TROCA DE ÓLEO REGISTRADA AINDA!"
-    
+
     km_since_last_oil = current_km - last_oil_km
     km_remaining = 1000 - km_since_last_oil
-    
-    # Sistema de alertas progressivos - SEMPRE retorna uma mensagem
+
     if km_since_last_oil >= 1000:
-        return f"* LASCOU - {km_since_last_oil}KM RODADOS*!\n        🚨TROQUE O ÓLEO AGORA!🚨"
+        return (
+            f"* LASCOU - {km_since_last_oil}KM RODADOS*!\n"
+            f"        🚨TROQUE O ÓLEO AGORA!🚨"
+        )
     elif km_remaining <= 100:
         return f"🔴*ALERTA CRÍTICO*🔴\n*{km_remaining}KM* PARA TROCAR DE ÓLEO!"
     elif km_remaining <= 300:
@@ -88,30 +87,32 @@ def check_oil_change_alert(current_km):
     elif km_remaining <= 500:
         return f"🔵*LEMBRETE*🔵\n*{km_remaining}KM* PARA TROCAR DE ÓLEO"
     else:
-        # SEMPRE retorna uma mensagem, mesmo que seja apenas informativa
         return f"⚪*STATUS ÓLEO*⚪\n*{km_since_last_oil}KM* RODADOS | *{km_remaining}KM* RESTANTES"
 
+
+# ---------------------------------------------------------
+# 🔹 COMBUSTÍVEL POR MÊS / TOTAL
+# ---------------------------------------------------------
 def total_fuel_por_mes():
     """
-    Retorna um dicionário com o total gasto em combustível
-    por cada mês do ano atual.
+    Retorna dicionário:
+    {'Janeiro': 0, 'Fevereiro': 10.5, ..., 'Dezembro': 0}
+    Para o ANO ATUAL.
     """
-    now = datetime.now()
-    ano_atual = now.year
-
+    ano_atual = datetime.now().year
+    
     meses_nomes = [
         "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ]
 
-    # inicia todos os meses com 0
     totais = {mes: 0 for mes in meses_nomes}
 
     for item in bot_data["fuel"]:
         try:
-            data_str = item['date'].split(' às ')[0]
+            data_str = item['date'].split(' às ')[0]  # exemplo: "18/02/25"
             dia, mes, ano = map(int, data_str.split('/'))
-            ano_completo = 2000 + ano
+            ano_completo = 2000 + ano  # transforma "25" em 2025
 
             if ano_completo == ano_atual:
                 nome_mes = meses_nomes[mes - 1]
@@ -121,11 +122,7 @@ def total_fuel_por_mes():
 
     return totais
 
+
 def total_fuel_geral():
-    """
-    Calcula o total gasto em todos os abastecimentos registrados
-    """
-    total = 0
-    for item in bot_data["fuel"]:
-        total += item['price']
-    return total
+    """Soma tudo de combustível já registrado."""
+    return sum(item['price'] for item in bot_data["fuel"])
